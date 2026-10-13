@@ -7,7 +7,8 @@ import {
   Cpu,
   Layers,
   Sparkles,
-  Check
+  Check,
+  FileText
 } from 'lucide-react';
 
 export default function GrammarDocs({ onInsert }) {
@@ -15,51 +16,168 @@ export default function GrammarDocs({ onInsert }) {
 
   const sections = [
     {
-      id: 'vars',
-      tag: 'VARIABLES',
-      title: '1. Variables & Value Shortcuts',
-      desc: 'Declare new variables or modify existing ones using natural English keywords.',
-      code: `set name to "jhomar"
-change score to 100
-increase lives by 1
-decrease health by 10`,
-      insert: 'set score to 100\nincrease score by 25\nsay "Final Score: " + score\n'
+      id: 'compiler',
+      tag: 'COMPILER (NEW IN v0.4)',
+      title: '1. Rust Compiler (Transpiler)',
+      desc: 'Plain translates your program into standalone Rust source code, and rustc builds a native standalone binary.',
+      bulletPoints: [
+        'cargo run -- compile <input.plain> [output.rs] — Emits standalone Rust with embedded Value runtime',
+        'rustc output.rs -o binary — Produces native zero-dependency executable',
+        'Compiler subset: set, say, if, repeat, while, functions, lists, math, interpolation, contains, starts/ends with, aggregations',
+        'Interpreted and compiled executions produce byte-identical output'
+      ],
+      code: `# Run via compiler:
+# cargo run -- compile examples/compile-demo.plain compiled.rs
+# rustc compiled.rs -o demo && ./demo
+
+set total to 10 plus 20
+say "Compiled total is {total}"`,
+      insert: 'set total to 10 plus 20\nsay "Compiled total is {total}"\n'
     },
     {
-      id: 'io',
-      tag: 'INPUT & OUTPUT',
-      title: '2. Interactive Terminal Input & Output',
-      desc: 'Prompt the user interactively in the terminal. Type answers right into the console prompt!',
+      id: 'interpolation',
+      tag: 'INTERPOLATION (v0.4)',
+      title: '2. Text String Interpolation',
+      desc: 'Embed variables and record fields directly within strings using {name} and {field of record}.',
       bulletPoints: [
-        'ask <var> with "<prompt>" — Pauses execution and waits for user answer in the terminal',
-        'Typed numbers are automatically parsed as numeric values for direct calculations',
-        'say <expr> — Outputs strings, variables, or math results to the console'
+        '"{name}" — Automatically formats variable value into the text string',
+        '"{field of record}" — Supports arbitrary nested field paths in interpolation',
+        '"{{}}" — Double braces print literal curly braces in the text',
+        'Unknown variable or field names produce clear diagnostic errors'
       ],
-      code: `ask user_name with "What is your name?"
-say "Hello, " + user_name
+      code: `set user_name to "Ana"
+set score to 95
+say "Hello {user_name}, your score is {score} {{points}}!"
 
-ask age with "How old are you?"
-say "Next year you will be: " + (age plus 1)`,
-      insert: 'ask user_name with "What is your name?"\nsay "Welcome, " + uppercase of user_name + "!"\n'
+set person to record with name "Ana", address record with city "Cebu"
+say "{name of person} lives in {city of address of person}"`,
+      insert: 'set user to "Ana"\nset score to 100\nsay "Hello {user}, your final score is {score}!"\n'
+    },
+    {
+      id: 'records',
+      tag: 'RECORDS (v0.4)',
+      title: '3. Records & Nested Records',
+      desc: 'Create structured key-value records, nest records inside records, and mutate fields at any depth.',
+      bulletPoints: [
+        'record with key val, key val — Creates a dictionary-like record',
+        '<field> of <record> — Reads the field value (e.g. name of person)',
+        '<field> of <subfield> of <record> — Chained field access for nested structures',
+        'set <field> of <subfield> of <record> to <val> — In-place field mutation',
+        'Missing field errors list all available fields on the record'
+      ],
+      code: `set person to record with name "Ana", address record with city "Cebu", zip 6000
+say city of address of person
+
+set city of address of person to "Manila"
+say "Updated: " + city of address of person`,
+      insert: `set person to record with name "Ana", address record with city "Cebu", zip 6000
+say "Resident: {name of person} in {city of address of person}"
+set city of address of person to "Manila"
+say "Moved to: {city of address of person}"
+`
+    },
+    {
+      id: 'files',
+      tag: 'FILES (v0.4)',
+      title: '4. File Operations & Line Iteration',
+      desc: 'Save, append, load, and iterate over files line-by-line using natural English statements.',
+      bulletPoints: [
+        'save <expr> to file "<path>" — Writes content to file (creates or overwrites)',
+        'append <expr> to file "<path>" — Appends new line with content to file',
+        'load <name> from file "<path>" — Loads entire file content as text',
+        'for each line in file "<path>" ... end — Iterates over file lines directly'
+      ],
+      code: `save "First line" to file "examples/people.txt"
+append "Second line" to file "examples/people.txt"
+
+for each line in file "examples/people.txt"
+    say line
+end`,
+      insert: `save "Ana" to file "examples/people.txt"
+append "Ben" to file "examples/people.txt"
+
+for each line in file "examples/people.txt"
+    say "Person: " + line
+end
+`
+    },
+    {
+      id: 'text_tools',
+      tag: 'TEXT TOOLS',
+      title: '5. Text Analysis & String Tools',
+      desc: 'Powerful English string manipulation helpers for searching, splitting, joining, and transforming.',
+      bulletPoints: [
+        'sentence contains "quick" — Substring check (returns true/false)',
+        'sentence starts with "the" / sentence ends with "fox" — Prefix/suffix checks',
+        'split <text> by "<delim>" — Splits string into list of parts',
+        'join <list> with "<delim>" — Joins elements into single string',
+        'replace <find> with <rep> in <text> — Replaces occurrences',
+        'trim of <text>, reverse of <text>, uppercase of, lowercase of',
+        'number of <text> — Converts text to numeric value',
+        'text of <expr> — Converts value to text'
+      ],
+      code: `set sentence to "  the quick brown fox  "
+set cleaned to trim of sentence
+
+if cleaned contains "quick" and cleaned starts with "the"
+    say "Search passed"
+end
+
+set words to split cleaned by " "
+say "Replaced: " + replace "fox" with "dog" in cleaned`,
+      insert: `set sentence to "the quick brown fox"
+set words to split sentence by " "
+say "Words count: " + length of words
+say "Joined: " + join words with "-"
+`
+    },
+    {
+      id: 'list_tools',
+      tag: 'LIST TOOLS',
+      title: '6. Lists, Sorting & Aggregations',
+      desc: 'Create lists, add or remove items, sort ascending/descending, and compute statistical aggregates.',
+      bulletPoints: [
+        '[a, b, c] — List literal syntax',
+        'add <val> to <list> — Append element',
+        'remove <val> from <list> / remove item <N> from <list> — Remove elements',
+        'sort <list> / sort <list> descending — In-place list sorting',
+        'sum of <list> — Sum of all numeric items',
+        'average of <list> — Arithmetic mean of numeric items',
+        'smallest of <list> / largest of <list> — Min/max values'
+      ],
+      code: `set scores to [80, 95, 60, 90]
+add 100 to scores
+sort scores
+
+say "Sum: " + sum of scores
+say "Average: " + average of scores
+say "Smallest: " + smallest of scores
+say "Largest: " + largest of scores`,
+      insert: `set scores to [85, 92, 78, 95]
+sort scores
+say "Lowest score: " + smallest of scores
+say "Highest score: " + largest of scores
+say "Average score: " + average of scores
+`
     },
     {
       id: 'functions',
       tag: 'FUNCTIONS',
-      title: '3. Functions & Isolated Scope',
-      desc: 'Define custom functions with parameters, local variables, and return values.',
+      title: '7. Functions & Scopes',
+      desc: 'Define custom functions with arguments, local scope, and return values.',
       bulletPoints: [
-        'define <name> with <arg1>, <arg2> ... end — Declares function with isolated scope',
-        'return <expr> — Returns calculated values cleanly back to the caller',
-        'call <name> with <arg1>, <arg2> — Invokes the function with arguments'
+        'define <name> with <arg1>, <arg2> ... end — Declares function',
+        'return <expr> — Returns value to caller',
+        'call <name> with <arg1>, <arg2> — Invokes function'
       ],
-      code: `define add_numbers with a, b
-    return a plus b
+      code: `define calculate_bonus with salary, rate
+    return salary multiplied by rate
 end
 
-set total to call add_numbers with 15, 35
-say "The total is: " + total`,
+set bonus to call calculate_bonus with 2000, 0.15
+say "Bonus: $" + bonus`,
       insert: `define greet with user_name
-    say "Hello, " + uppercase of user_name
+    say "Hello, {uppercase of user_name}!"
 end
 
 call greet with "jhomar"
@@ -67,14 +185,13 @@ call greet with "jhomar"
     },
     {
       id: 'imports',
-      tag: 'MODULES & IMPORTS',
-      title: '4. Multi-File Imports & Integration',
-      desc: 'Import another .plain file to call its functions and access its shared variables.',
+      tag: 'MODULES',
+      title: '8. Multi-File Imports',
+      desc: 'Import other .plain files to reuse shared functions and variables.',
       bulletPoints: [
-        'import "<path.plain>" / include "<path>" — Imports module into current workspace',
-        'Functions defined in imported files are immediately callable with "call"',
-        'Top-level variables in imported files become accessible in the caller',
-        'Safe execution with automatic circular-import detection'
+        'import "<path.plain>" / include "<path>" — Imports module into workspace',
+        'Functions in imported file become immediately callable',
+        'Circular imports are automatically prevented'
       ],
       code: `import "examples/math_utils.plain"
 
@@ -86,105 +203,17 @@ say "Result: " + doubled
 `
     },
     {
-      id: 'lists',
-      tag: 'LISTS',
-      title: '5. Lists & For Each Iteration',
-      desc: 'Create lists with square brackets, append items with "add ... to", and iterate with "for each".',
+      id: 'io',
+      tag: 'INPUT',
+      title: '9. Interactive Terminal Input',
+      desc: 'Prompt user interactively in the terminal. Type answers right into the console.',
       bulletPoints: [
-        '[item1, item2] — Bracket notation for initializing lists',
-        'add <val> to <list> — Appends element to the list',
-        'for each <item> in <list> ... end — Iterates through elements'
+        'ask <var> with "<prompt>" — Prompts user in terminal',
+        'Numeric inputs are automatically parsed as numbers'
       ],
-      code: `set scores to [80, 90, 75]
-add 100 to scores
-
-for each score in scores
-    say "Score item: " + score
-end`,
-      insert: `set items to ["Laptop", "Mouse", "Keyboard"]
-add "Headphones" to items
-
-for each item in items
-    say "Item in cart: " + item
-end
-`
-    },
-    {
-      id: 'helpers',
-      tag: 'HELPERS',
-      title: '6. Text & List Built-in Helpers',
-      desc: 'Convenient 1-indexed English shortcuts for reading lengths, items, and letter casing.',
-      bulletPoints: [
-        'length of <list or text> — Total count of items or characters',
-        'first of <list or text> — The first element or letter',
-        'last of <list or text> — The last element or letter',
-        'item 2 of <list or text> — 1-indexed element access',
-        'uppercase of <text> — Capitalize entire string',
-        'lowercase of <text> — Lowercase entire string'
-      ],
-      code: `say "Upper: " + uppercase of "hello world"
-say "Length: " + length of [10, 20, 30]
-say "First: " + first of [10, 20, 30]
-say "Item 2: " + item 2 of [10, 20, 30]`,
-      insert: 'set fruits to ["Apple", "Banana", "Cherry"]\nsay "Count: " + length of fruits\nsay "First fruit: " + first of fruits\nsay "Second fruit: " + item 2 of fruits\n'
-    },
-    {
-      id: 'conditionals',
-      tag: 'LOGIC',
-      title: '7. Chained Conditionals',
-      desc: 'Branch logic naturally with "if", "otherwise if", "otherwise", and "end".',
-      code: `if age is between 13 and 19
-    say "Status: Teenager"
-otherwise if age is at least 20
-    say "Status: Adult"
-otherwise
-    say "Status: Kid"
-end`,
-      insert: `set age to 16
-if age is between 13 and 19
-    say "Status: Teenager"
-otherwise if age is at least 20
-    say "Status: Adult"
-otherwise
-    say "Status: Kid"
-end
-`
-    },
-    {
-      id: 'comparisons',
-      tag: 'OPERATORS',
-      title: '8. English Comparisons & Math Words',
-      desc: 'Readable English words replace complex symbolic operators.',
-      bulletPoints: [
-        'is between A and B — Inclusive range comparison',
-        'is above / is greater than (>)',
-        'is below / is less than (<)',
-        'is at least (>=) / is at most (<=)',
-        'is equal to / is same as (==)',
-        'is not equal to / is different from (!=)',
-        'plus (+), minus (-), multiplied by (*), divided by (/)'
-      ],
-      code: `set total to base plus (rate multiplied by 2)
-if score is between 80 and 100
-    say "Honor student!"
-end`,
-      insert: 'if score is at least 90 and score is at most 100\n    say "Grade: A"\nend\n'
-    },
-    {
-      id: 'loops',
-      tag: 'LOOPS',
-      title: '9. Repeat & While Loops',
-      desc: 'Traditional loop constructs for repeating fixed counts or conditional loops.',
-      code: `repeat 3 times
-    say "Echo!"
-end
-
-set count to 1
-while count is at most 5
-    say count
-    increase count by 1
-end`,
-      insert: 'repeat 3 times\n    say "Hello from Plain!"\nend\n'
+      code: `ask user_name with "What is your name?"
+say "Welcome, " + user_name`,
+      insert: 'ask user_name with "What is your name?"\nsay "Hello, {user_name}!"\n'
     }
   ];
 
@@ -200,11 +229,11 @@ end`,
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-cyan)' }}>
           <BookOpen size={16} />
           <h3 style={{ fontSize: '14px', fontWeight: 700, letterSpacing: '0.02em' }}>
-            Plain Language Reference (v0.2)
+            Plain Language Reference (v0.4)
           </h3>
         </div>
         <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', lineHeight: 1.5 }}>
-          Plain turns basic English sentences into working programs. Explore syntax rules below or click <strong>Insert</strong> to test directly in your editor.
+          Complete guide to Plain v0.4 features: native compiler to Rust, string interpolation, nested records, file operations, and text/list helpers.
         </p>
       </div>
 

@@ -1,5 +1,150 @@
 export const EXAMPLES = [
   {
+    id: 'v04',
+    title: 'Plain v0.4 Features Tour',
+    category: 'v0.4 Features',
+    description: 'String interpolation, nested records, and line-by-line file reading',
+    code: `# Plain v0.4 Features Tour — interpolation, nested records, file lines
+
+# 1. Text Interpolation
+set user_name to "Jhomar"
+set score to 100
+say "Hello {user_name}, your score is {score}"
+
+# 2. Nested Records
+set person to record with name "Ana", address record with city "Cebu", zip 6000
+say "{name of person} lives in {city of address of person}"
+
+# Mutate nested record field
+set city of address of person to "Manila"
+say "Updated address city: {city of address of person}"
+
+# 3. Records in Lists & Iteration
+set people to [record with name "Ana", age 21, record with name "Ben", age 17]
+for each p in people
+    say "{name of p} is {age of p}"
+end
+
+# 4. File Operations — line by line
+save "Ana" to file "examples/people.txt"
+append "Ben" to file "examples/people.txt"
+append "Charlie" to file "examples/people.txt"
+
+say "--- Lines from file ---"
+for each line in file "examples/people.txt"
+    say line
+end
+`
+  },
+  {
+    id: 'compile_demo',
+    title: 'Compiler Demo (Plain → Rust)',
+    category: 'v0.4 Features',
+    description: 'Compiles into standalone Rust source code executable by rustc',
+    code: `# Plain v0.4 Compiler Demo — examples/compile-demo.plain
+# Compiles to standalone native Rust without crates!
+# Both interpreted and compiled executions produce byte-identical output.
+
+# 1. Variables and math
+set base to 10
+increase base by 5
+decrease base by 3
+say "Base value: {base}"
+
+# 2. Logic & Comparisons
+if base is greater than 10 and base is between 10 and 15
+    say "Comparison check: passed"
+end
+
+# 3. String tools & {name} interpolation
+set title to "Plain Language"
+if title contains "Lang" and title starts with "Plain" and title ends with "Language"
+    say "Title matches: {title}"
+end
+say "Uppercase title: {uppercase of title}"
+say "Lowercase title: {lowercase of title}"
+
+# 4. Functions & Returns
+define calculate_total with price, tax_rate
+    return price plus (price multiplied by tax_rate)
+end
+
+set total to call calculate_total with 100, 0.12
+say "Total amount: {total}"
+
+# 5. Lists & aggregations
+set numbers to [10, 20, 30]
+add 40 to numbers
+
+say "Numbers count: {length of numbers}"
+say "First number: {first of numbers}"
+say "Last number: {last of numbers}"
+say "Item 2: {item 2 of numbers}"
+say "Sum of numbers: {sum of numbers}"
+say "Average of numbers: {average of numbers}"
+
+# 6. Loops (Repeat & While)
+set counter to 0
+repeat 3 times
+    increase counter by 1
+end
+say "Repeated counter: {counter}"
+
+while counter is above 0
+    decrease counter by 1
+end
+say "Counter after countdown: {counter}"
+say "Compiler demo complete!"
+`
+  },
+  {
+    id: 'v03',
+    title: 'Plain v0.3 Text & Records',
+    category: 'v0.3 Features',
+    description: 'Flat records, text tools (split/join/replace), and list aggregations (sum/average/sort)',
+    code: `# Plain v0.3 Features Tour
+
+# 1. Records / Dictionaries
+set person to record with name "Ana", age 20
+say "Name: " + name of person
+say "Age: " + age of person
+set age of person to 21
+say "Updated age: " + age of person
+
+# 2. Text Tools
+set phrase to "  the quick brown fox jumps  "
+say "Trimmed: [" + trim of phrase + "]"
+
+set sentence to trim of phrase
+if sentence contains "quick" and sentence starts with "the" and sentence ends with "jumps"
+    say "Text matching: passed"
+end
+
+set words to split sentence by " "
+say "Words list: " + words
+
+set joined to join words with "-"
+say "Joined with dashes: " + joined
+
+set replaced to replace "fox" with "dog" in sentence
+say "Replaced sentence: " + replaced
+
+# 3. List Aggregations & Helpers
+set scores to [80, 95, 60, 90]
+say "Original scores: " + scores
+say "Sum: " + sum of scores
+say "Average: " + average of scores
+say "Smallest: " + smallest of scores
+say "Largest: " + largest of scores
+
+sort scores
+say "Sorted scores: " + scores
+
+sort scores descending
+say "Sorted descending: " + scores
+`
+  },
+  {
     id: 'features',
     title: 'Plain v0.2 Syntax Tour',
     category: 'v0.2 Features',
@@ -75,49 +220,10 @@ end
 `
   },
   {
-    id: 'functions_demo',
-    title: 'Functions & Scopes',
-    category: 'v0.2 Features',
-    description: 'Local function scopes, parameters, and return values',
-    code: `# Functions have their own local scope in v0.2!
-
-define greet with user_name
-    say "Welcome, " + uppercase of user_name + "!"
-end
-
-define sum_of with a, b
-    return a plus b
-end
-
-call greet with "Alex"
-set total to call sum_of with 42, 58
-say "Total sum: " + total
-`
-  },
-  {
-    id: 'lists_demo',
-    title: 'Lists & For Each Loop',
-    category: 'v0.2 Features',
-    description: 'Creating lists, appending with add, and looping with for each',
-    code: `# Lists in Plain v0.2
-set items to ["Laptop", "Mouse", "Keyboard"]
-add "Headphones" to items
-
-say "Shopping cart count: " + length of items
-say "First item: " + first of items
-say "Last item: " + last of items
-
-say "--- Items in Cart ---"
-for each product in items
-    say "Product: " + product
-end
-`
-  },
-  {
     id: 'hello',
     title: 'Hello & Welcome (v0.1)',
     category: 'Basics',
-    description: 'Original v0.1 basic syntax (still fully supported in v0.2)',
+    description: 'Original v0.1 basic syntax (still fully supported in v0.4)',
     code: `# Welcome to Plain!
 # Plain lets you write code that reads like basic English sentences.
 
@@ -131,30 +237,6 @@ if age is above 18
     say "Status: You are an adult"
 otherwise
     say "Status: You are a minor"
-end
-`
-  },
-  {
-    id: 'calculator',
-    title: 'Store Checkout & Discount',
-    category: 'Math & Logic',
-    description: 'Arithmetic formulas and compound English logic with "and"',
-    code: `# Calculate order totals and conditional discounts
-set item_name to "Mechanical Keyboard"
-set price to 120
-set quantity to 3
-
-set subtotal to price * quantity
-say "Item: " + item_name
-say "Subtotal: $" + subtotal
-
-if subtotal is at least 300 and quantity is above 2
-    set discount to 30
-    set final_total to subtotal - discount
-    say "Special discount applied: -$" + discount
-    say "Final price to pay: $" + final_total
-otherwise
-    say "Standard price: $" + subtotal
 end
 `
   }

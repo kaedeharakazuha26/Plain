@@ -9,7 +9,9 @@ import {
   ChevronRight,
   Info,
   Code2,
-  Check
+  Check,
+  Cpu,
+  FileText
 } from 'lucide-react';
 
 export default function SentenceBar({ onInsert }) {
@@ -18,219 +20,194 @@ export default function SentenceBar({ onInsert }) {
 
   const categories = [
     { id: 'all', label: 'All' },
-    { id: 'modules', label: 'Imports' },
-    { id: 'io', label: 'Input & Say' },
-    { id: 'vars', label: 'Variables' },
+    { id: 'v04', label: 'v0.4 Features' },
+    { id: 'records', label: 'Records' },
+    { id: 'files', label: 'Files' },
+    { id: 'text', label: 'Text Tools' },
+    { id: 'lists', label: 'Lists & Stats' },
     { id: 'functions', label: 'Functions' },
-    { id: 'lists', label: 'Lists & Loops' },
-    { id: 'logic', label: 'Conditionals' },
-    { id: 'helpers', label: 'Helpers' }
+    { id: 'io', label: 'Input & Say' }
   ];
 
   const snippets = [
-    // Multi-file Modules & Imports
+    // v0.4 String Interpolation & Compiler
     {
-      category: 'modules',
-      keyword: 'import',
-      title: 'Import another Plain file',
-      description: 'Imports another .plain file to call its functions and access its shared variables.',
-      code: 'import "examples/math_utils.plain"\n\nset doubled to call double_number with 21\nsay "21 doubled is: " + doubled\n'
+      category: 'v04',
+      keyword: 'interpolation',
+      title: 'String text interpolation',
+      description: 'Embed variables and record field expressions directly within string literals with {expr}.',
+      code: 'set user to "Ana"\nset score to 95\nsay "Hello {user}, your score is {score}!"\n'
     },
     {
-      category: 'modules',
-      keyword: 'include',
-      title: 'Include helper module',
-      description: 'Alternative English syntax to import reusable module code.',
-      code: 'include "helpers.plain"\n\ncall setup_environment\n'
+      category: 'v04',
+      keyword: 'compile',
+      title: 'Compile Plain to standalone Rust',
+      description: 'Translates Plain to Rust source that rustc builds into a standalone executable.',
+      code: '# In your terminal:\n# cargo run -- compile input.plain compiled.rs\n# rustc compiled.rs -o demo && ./demo\n'
     },
-    // Interactive I/O
+    // Records & Nested Records
     {
-      category: 'io',
-      keyword: 'ask',
-      title: 'Ask for text input',
-      description: 'Prompts the user interactively in the terminal and stores the answer in a variable.',
-      code: 'ask user_name with "What is your name?"\nsay "Hello, " + user_name\n'
-    },
-    {
-      category: 'io',
-      keyword: 'ask number',
-      title: 'Ask for number and do math',
-      description: 'Prompts the user for a number. Automatically parsed as numeric so you can calculate with it immediately.',
-      code: 'ask user_age with "How old are you?"\nsay "In 5 years you will be: " + (user_age plus 5)\n'
+      category: 'records',
+      keyword: 'record with',
+      title: 'Create nested record',
+      description: 'Defines a key-value record, including nested child records.',
+      code: 'set person to record with name "Ana", address record with city "Cebu", zip 6000\nsay "{name of person} lives in {city of address of person}"\n'
     },
     {
-      category: 'io',
-      keyword: 'say',
-      title: 'Print text or value',
-      description: 'Outputs text, variables, or expressions to the console.',
-      code: 'say "Welcome to Plain Language!"\n'
-    },
-    // Variables
-    {
-      category: 'vars',
-      keyword: 'set',
-      title: 'Set variable',
-      description: 'Creates or updates a variable with a value.',
-      code: 'set player_score to 100\n'
+      category: 'records',
+      keyword: 'field of',
+      title: 'Read nested record field',
+      description: 'Accesses a field from a record using English "field of record" chaining.',
+      code: 'say city of address of person\n'
     },
     {
-      category: 'vars',
-      keyword: 'increase',
-      title: 'Increase variable shortcut',
-      description: 'Increments a numeric variable by a specified amount.',
-      code: 'increase player_score by 10\n'
+      category: 'records',
+      keyword: 'set field of',
+      title: 'Mutate nested record field',
+      description: 'Updates a specific nested field inside a record in place.',
+      code: 'set city of address of person to "Manila"\nsay "Updated city: {city of address of person}"\n'
     },
     {
-      category: 'vars',
-      keyword: 'decrease',
-      title: 'Decrease variable shortcut',
-      description: 'Decrements a numeric variable by a specified amount.',
-      code: 'decrease lives by 1\n'
+      category: 'records',
+      keyword: 'records in list',
+      title: 'List of records iteration',
+      description: 'Store multiple records in a list and iterate through them with for each.',
+      code: 'set people to [record with name "Ana", age 21, record with name "Ben", age 17]\nfor each p in people\n    say "{name of p} is {age of p}"\nend\n'
+    },
+    // File operations
+    {
+      category: 'files',
+      keyword: 'for each line',
+      title: 'Read file line-by-line',
+      description: 'Iterates through each line in a text file directly without loading all at once.',
+      code: 'for each line in file "examples/people.txt"\n    say line\nend\n'
     },
     {
-      category: 'vars',
-      keyword: 'change',
-      title: 'Change variable',
-      description: 'Updates an existing variable to a new value.',
-      code: 'change status to "ready"\n'
+      category: 'files',
+      keyword: 'save to file',
+      title: 'Save text to file',
+      description: 'Writes content to the specified file path, creating or replacing it.',
+      code: 'save "Hello Plain Files" to file "examples/notes.txt"\n'
+    },
+    {
+      category: 'files',
+      keyword: 'append to file',
+      title: 'Append line to file',
+      description: 'Appends a new line with content to the file.',
+      code: 'append "New appended record" to file "examples/notes.txt"\n'
+    },
+    {
+      category: 'files',
+      keyword: 'load from file',
+      title: 'Load file content',
+      description: 'Reads the entire file content into a text variable.',
+      code: 'load notes from file "examples/notes.txt"\nsay notes\n'
+    },
+    // Text tools
+    {
+      category: 'text',
+      keyword: 'contains',
+      title: 'Substring matching',
+      description: 'Checks if text contains a substring, or if a list contains an item.',
+      code: 'set text to "the quick brown fox"\nif text contains "quick" and text starts with "the"\n    say "Matched!"\nend\n'
+    },
+    {
+      category: 'text',
+      keyword: 'split by',
+      title: 'Split text into list',
+      description: 'Splits a text string by a delimiter into a list of words or parts.',
+      code: 'set words to split "apple,banana,cherry" by ","\nsay "Word count: " + length of words\n'
+    },
+    {
+      category: 'text',
+      keyword: 'join with',
+      title: 'Join list into text',
+      description: 'Joins elements of a list into a single string separated by a delimiter.',
+      code: 'set tags to ["rust", "plain", "compiler"]\nsay "Tags: " + join tags with " #"\n'
+    },
+    {
+      category: 'text',
+      keyword: 'replace with in',
+      title: 'Replace text occurrences',
+      description: 'Replaces all occurrences of a search string with a new replacement.',
+      code: 'set updated to replace "fox" with "dog" in "the quick brown fox"\nsay updated\n'
+    },
+    // Lists & Aggregations
+    {
+      category: 'lists',
+      keyword: 'sum of',
+      title: 'Sum and average of list',
+      description: 'Computes statistical totals directly in English without loops.',
+      code: 'set scores to [85, 90, 95]\nsay "Sum: " + sum of scores\nsay "Average: " + average of scores\n'
+    },
+    {
+      category: 'lists',
+      keyword: 'smallest of',
+      title: 'Smallest and largest item',
+      description: 'Finds minimum or maximum values in a list.',
+      code: 'set temperatures to [22, 18, 31, 25]\nsay "Min: " + smallest of temperatures\nsay "Max: " + largest of temperatures\n'
+    },
+    {
+      category: 'lists',
+      keyword: 'sort',
+      title: 'Sort list in place',
+      description: 'Sorts list items ascending or descending.',
+      code: 'set scores to [90, 60, 85, 100]\nsort scores descending\nsay "Rankings: " + scores\n'
     },
     // Functions
     {
       category: 'functions',
       keyword: 'define',
-      title: 'Define function (v0.2)',
-      description: 'Declares a custom function with isolated local scope.',
-      code: 'define greet with name\n    say "Hello, " + uppercase of name\nend\n'
+      title: 'Function with parameters & return',
+      description: 'Creates a callable function with parameters, local scope, and return value.',
+      code: 'define calculate_tax with amount, rate\n    return amount multiplied by rate\nend\n\nset tax to call calculate_tax with 100, 0.12\nsay "Tax: $" + tax\n'
+    },
+    // I/O & Interactive Input
+    {
+      category: 'io',
+      keyword: 'ask',
+      title: 'Interactive terminal input',
+      description: 'Prompts user interactively in the terminal and stores the answer in a variable.',
+      code: 'ask user_name with "What is your name?"\nsay "Hello, {user_name}!"\n'
     },
     {
-      category: 'functions',
-      keyword: 'call',
-      title: 'Call function (v0.2)',
-      description: 'Invokes a function and passes arguments.',
-      code: 'call greet with "Alex"\n'
-    },
-    {
-      category: 'functions',
-      keyword: 'define multi-arg',
-      title: 'Function with multiple arguments',
-      description: 'Defines a custom function that takes multiple comma-separated arguments after with.',
-      code: 'define calc_area with length, width\n    return length multiplied by width\nend\n\nset room_area to call calc_area with 12, 10\nsay "Room area: " + room_area\n'
-    },
-    {
-      category: 'functions',
-      keyword: 'return',
-      title: 'Return from function (v0.2)',
-      description: 'Returns a calculated value back to the caller.',
-      code: 'define add_bonus with score\n    return score plus 25\nend\nset final_score to call add_bonus with 100\n'
-    },
-    // Lists & Loops
-    {
-      category: 'lists',
-      keyword: 'list',
-      title: 'Create a list (v0.2)',
-      description: 'Initializes a list with square bracket notation.',
-      code: 'set scores to [85, 92, 78]\n'
-    },
-    {
-      category: 'lists',
-      keyword: 'item of',
-      title: 'Access item by 1-indexed number',
-      description: 'Pulls a specific element from a list starting from index 1.',
-      code: 'set inventory to ["Sword", "Shield", "Potion"]\nsay "Equipped: " + item 1 of inventory\nsay "Secondary: " + item 2 of inventory\n'
-    },
-    {
-      category: 'lists',
-      keyword: 'add to',
-      title: 'Append item to list (v0.2)',
-      description: 'Adds a new item to an existing list.',
-      code: 'add 95 to scores\n'
-    },
-    {
-      category: 'lists',
-      keyword: 'for each',
-      title: 'Iterate with for each (v0.2)',
-      description: 'Loops through each item in a list with an iterator variable.',
-      code: 'for each item in scores\n    say "Score: " + item\nend\n'
-    },
-    // Conditionals
-    {
-      category: 'logic',
-      keyword: 'if chained',
-      title: 'If ... otherwise if ... otherwise (v0.2)',
-      description: 'Chained conditional branching for multiple cases.',
-      code: 'if age is between 13 and 19\n    say "Teenager"\notherwise if age is at least 20\n    say "Adult"\notherwise\n    say "Child"\nend\n'
-    },
-    {
-      category: 'logic',
-      keyword: 'repeat',
-      title: 'Repeat loop',
-      description: 'Executes a block of code a set number of times.',
-      code: 'repeat 3 times\n    say "Plain is simple and fun!"\nend\n'
-    },
-    {
-      category: 'logic',
-      keyword: 'while',
-      title: 'While loop',
-      description: 'Repeats execution while a condition remains true.',
-      code: 'while count is below 5\n    say count\n    increase count by 1\nend\n'
-    },
-    // Helpers
-    {
-      category: 'helpers',
-      keyword: 'helpers',
-      title: 'Text & List Helpers (v0.2)',
-      description: 'English shortcuts for lengths, casing, and index lookups.',
-      code: 'say "Length: " + length of scores\nsay "First: " + first of scores\nsay "Upper: " + uppercase of "hello"\n'
-    },
-    {
-      category: 'helpers',
-      keyword: 'comparisons',
-      title: 'English Math & Comparisons (v0.2)',
-      description: 'Natural English words for comparisons and arithmetic.',
-      code: 'if score is between 80 and 100\n    say "Honor Roll"\nend\n'
+      category: 'io',
+      keyword: 'say',
+      title: 'Output text or expression',
+      description: 'Prints strings, variables, or math results to stdout.',
+      code: 'say "Welcome to Plain v0.4!"\n'
     }
   ];
 
-  const filtered = activeCategory === 'all'
+  const filteredSnippets = activeCategory === 'all'
     ? snippets
     : snippets.filter(s => s.category === activeCategory);
 
-  const handleInsertClick = (code, idx) => {
+  const handleSnippetClick = (code, idx) => {
     onInsert(code);
     setCopiedIdx(idx);
     setTimeout(() => setCopiedIdx(null), 1500);
   };
 
   return (
-    <div className="sentence-builder-wrapper">
-      {/* 1. Instruction Card */}
-      <div className="builder-instructions-card">
-        <div className="instructions-title">
-          <Info size={14} color="var(--accent-cyan)" />
-          <span>How to Build Plain Sentences</span>
+    <div className="sentence-bar-container">
+      {/* Top Banner / Explanation Card */}
+      <div className="sentence-intro-card">
+        <div className="sentence-intro-badge">
+          <Sparkles size={13} />
+          <span>English Sentence Builder (v0.4)</span>
         </div>
-        <ol className="instructions-steps">
-          <li>
-            <strong>1. Click to Insert:</strong> Click any snippet below to insert valid English syntax directly into your active code.
-          </li>
-          <li>
-            <strong>2. Customize Placeholders:</strong> Change variable names (e.g. <code>user_name</code>) and values (e.g. <code>"What is your name?"</code>).
-          </li>
-          <li>
-            <strong>3. Chain Sentences:</strong> Place each sentence on its own line (e.g. <code>ask</code> followed by <code>say</code>).
-          </li>
-          <li>
-            <strong>4. Interactive Terminal:</strong> When your program asks for input, you can type your answer right in the terminal dock and press <kbd>Enter</kbd>!
-          </li>
-        </ol>
+        <p className="sentence-intro-text">
+          Plain turns basic English sentences into working code. Click any pattern below to insert it into your editor or terminal!
+        </p>
       </div>
 
-      {/* 2. Category Filters */}
-      <div className="builder-category-tabs">
+      {/* Category Filter Pills */}
+      <div className="sentence-categories">
         {categories.map(cat => (
           <button
             key={cat.id}
-            className={`builder-tab-btn ${activeCategory === cat.id ? 'active' : ''}`}
+            className={`sentence-cat-btn ${activeCategory === cat.id ? 'active' : ''}`}
             onClick={() => setActiveCategory(cat.id)}
           >
             {cat.label}
@@ -238,38 +215,26 @@ export default function SentenceBar({ onInsert }) {
         ))}
       </div>
 
-      {/* 3. Snippets Grid */}
-      <div className="builder-snippets-list">
-        {filtered.map((item, idx) => (
-          <div key={idx} className="builder-snippet-card">
-            <div className="snippet-card-header">
-              <span className="snippet-kw-badge">{item.keyword}</span>
-              <span className="snippet-title-text">{item.title}</span>
+      {/* Snippet Card List */}
+      <div className="sentence-cards-list">
+        {filteredSnippets.map((item, idx) => (
+          <div
+            key={idx}
+            className="sentence-card"
+            onClick={() => handleSnippetClick(item.code, idx)}
+            title="Click to insert into editor"
+          >
+            <div className="sentence-card-header">
+              <span className="sentence-keyword-pill">{item.keyword}</span>
+              <span className="sentence-title">{item.title}</span>
+              <span className="sentence-insert-icon">
+                {copiedIdx === idx ? <Check size={12} color="var(--accent-green)" /> : <Plus size={12} />}
+              </span>
             </div>
-
-            <p className="snippet-desc-text">{item.description}</p>
-
-            <pre className="snippet-code-preview">
+            <p className="sentence-desc">{item.description}</p>
+            <div className="sentence-code-preview">
               <code>{item.code.trim()}</code>
-            </pre>
-
-            <button
-              className={`btn-insert-snippet ${copiedIdx === idx ? 'inserted' : ''}`}
-              onClick={() => handleInsertClick(item.code, idx)}
-              title="Insert into editor"
-            >
-              {copiedIdx === idx ? (
-                <>
-                  <Check size={12} />
-                  <span>Inserted!</span>
-                </>
-              ) : (
-                <>
-                  <Plus size={12} />
-                  <span>Insert Sentence</span>
-                </>
-              )}
-            </button>
+            </div>
           </div>
         ))}
       </div>
