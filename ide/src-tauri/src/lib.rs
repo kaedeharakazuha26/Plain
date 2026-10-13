@@ -1,6 +1,7 @@
 #[tauri::command]
-fn run_plain(code: String) -> plain_lang::InspectResult {
-  plain_lang::inspect_source(&code)
+fn run_plain(code: String, inputs: Option<Vec<String>>) -> plain_lang::InspectResult {
+  let inputs = inputs.unwrap_or_default();
+  plain_lang::inspect_source_with_inputs(&code, &inputs)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

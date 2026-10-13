@@ -126,6 +126,8 @@ export function tokenizePlain(source) {
         case 'not': tokens.push({ kind: 'Not', line }); break;
         case 'and': tokens.push({ kind: 'And', line }); break;
         case 'or': tokens.push({ kind: 'Or', line }); break;
+        case 'ask': tokens.push({ kind: 'Ask', line }); break;
+        case 'with': tokens.push({ kind: 'With', line }); break;
         case 'true': tokens.push({ kind: 'True', line }); break;
         case 'false': tokens.push({ kind: 'False', line }); break;
         default: tokens.push({ kind: { Ident: word }, line }); break;
@@ -140,7 +142,7 @@ export function tokenizePlain(source) {
   return tokens;
 }
 
-export function runSimulator(source) {
+export function runSimulator(source, inputs = []) {
   const startTime = performance.now();
   let tokens = [];
   try {
@@ -325,6 +327,18 @@ export function runSimulator(source) {
       return { Set: { name, value } };
     }
 
+    if (k === 'Ask') {
+      advance();
+      const identTok = advance();
+      if (!identTok.kind || typeof identTok.kind !== 'object' || !('Ident' in identTok.kind)) {
+        throw new Error(`Line ${tok.line}: Expected variable name after 'ask'`);
+      }
+      const name = identTok.kind.Ident;
+      if (peek().kind === 'With') advance();
+      const prompt = parseExpression();
+      return { Ask: { name, prompt } };
+    }
+
     if (k === 'Say') {
       advance();
       const expr = parseExpression();
@@ -422,6 +436,8 @@ export function runSimulator(source) {
   // Interpreter
   const vars = {};
   const output = [];
+  const inputQueue = Array.isArray(inputs) ? [...inputs] : [];
+  let waitingForInput = null;
 
   function isTruthy(val) {
     if ('Bool' in val) return val.Bool;
@@ -507,6 +523,25 @@ export function runSimulator(source) {
       vars[stmt.Set.name] = v;
       return;
     }
+    if ('Ask' in stmt) {
+      const p = evalExpr(stmt.Ask.prompt);
+      const promptStr = stringifyVal(p);
+      if (inputQueue.length > 0) {
+        const val = inputQueue.shift();
+        output.push(`${promptStr} ${val}`);
+        const parsedNum = parseFloat(val);
+        if (!isNaN(parsedNum) && String(parsedNum) === val.trim()) {
+          vars[stmt.Ask.name] = { Number: parsedNum };
+        } else {
+          vars[stmt.Ask.name] = { Text: val };
+        }
+      } else {
+        output.push(promptStr);
+        waitingForInput = { variable: stmt.Ask.name, prompt: promptStr };
+        throw { isWaiting: true };
+      }
+      return;
+    }
     if ('Say' in stmt) {
       const v = evalExpr(stmt.Say.expr);
       const lineStr = stringifyVal(v);
@@ -555,10 +590,24 @@ export function runSimulator(source) {
       ast,
       variables: vars,
       error: null,
+      waiting_for_input: null,
       executionTimeMs: Math.round((performance.now() - startTime) * 100) / 100,
       engine: 'js-simulator'
     };
   } catch (err) {
+    if (err && err.isWaiting) {
+      return {
+        success: true,
+        output,
+        tokens,
+        ast,
+        variables: vars,
+        error: null,
+        waiting_for_input: waitingForInput,
+        executionTimeMs: Math.round((performance.now() - startTime) * 100) / 100,
+        engine: 'js-simulator'
+      };
+    }
     return {
       success: false,
       output,
@@ -566,6 +615,7 @@ export function runSimulator(source) {
       ast,
       variables: vars,
       error: err.message,
+      waiting_for_input: null,
       executionTimeMs: Math.round((performance.now() - startTime) * 100) / 100,
       engine: 'js-simulator'
     };

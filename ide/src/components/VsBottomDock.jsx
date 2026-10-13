@@ -25,7 +25,9 @@ export default function VsBottomDock({
   onClear,
   onClose,
   dockHeight,
-  setDockHeight
+  setDockHeight,
+  onInputSubmit,
+  onResetSession
 }) {
   const isExpanded = dockHeight > 250;
 
@@ -120,7 +122,10 @@ export default function VsBottomDock({
             success={result.success}
             executionTimeMs={result.executionTimeMs}
             engine={result.engine}
+            waitingForInput={result.waiting_for_input}
+            onInputSubmit={onInputSubmit}
             onClear={onClear}
+            onResetSession={onResetSession}
           />
         )}
 

@@ -1,57 +1,127 @@
-import React from 'react';
-import { BookOpen, PlusCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import {
+  BookOpen,
+  PlusCircle,
+  Code,
+  Terminal,
+  Cpu,
+  Layers,
+  Sparkles,
+  Check
+} from 'lucide-react';
 
 export default function GrammarDocs({ onInsert }) {
+  const [copiedSection, setCopiedSection] = useState(null);
+
   const sections = [
     {
-      title: '1. Variables & Shortcuts (v0.2)',
-      desc: 'Declare, change, or increment variables.',
-      code: 'set name to "jhomar"\nchange score to 100\nincrease lives by 2\ndecrease health by 10',
-      insert: 'increase score by 5\n'
+      id: 'vars',
+      tag: 'VARIABLES',
+      title: '1. Variables & Value Shortcuts',
+      desc: 'Declare new variables or modify existing ones using natural English keywords.',
+      code: `set name to "jhomar"
+change score to 100
+increase lives by 1
+decrease health by 10`,
+      insert: 'set score to 100\nincrease score by 25\nsay "Final Score: " + score\n'
     },
     {
-      title: '2. User Input (v0.2)',
-      desc: 'Prompt the user for input. Automatically parses numbers or text.',
-      code: 'ask age with "How old are you?"',
-      insert: 'ask user_name with "What is your name?"\n'
+      id: 'io',
+      tag: 'INPUT & OUTPUT',
+      title: '2. Interactive Terminal Input & Output',
+      desc: 'Prompt the user interactively in the bottom terminal. Type answers right into the console prompt!',
+      code: `ask user_name with "What is your name?"
+say "Hello, " + user_name
+
+ask age with "How old are you?"
+say "Next year you will be: " + (age plus 1)`,
+      insert: 'ask user_name with "What is your name?"\nsay "Welcome, " + uppercase of user_name + "!"\n'
     },
     {
-      title: '3. Functions & Scopes (v0.2)',
-      desc: 'Define custom functions with isolated scope and return values.',
-      code: 'define add_numbers with a, b\n    return a plus b\nend\nset total to call add_numbers with 10, 20',
-      insert: 'define greet with name\n    say "Hello, " + uppercase of name\nend\ncall greet with "Alex"\n'
+      id: 'functions',
+      tag: 'FUNCTIONS',
+      title: '3. Functions & Isolated Scope',
+      desc: 'Define functions with parameters, local variables, and return values.',
+      code: `define add_numbers with a, b
+    return a plus b
+end
+
+set total to call add_numbers with 15, 35
+say "The total is: " + total`,
+      insert: `define greet with user_name
+    say "Hello, " + uppercase of user_name
+end
+
+call greet with "jhomar"
+`
     },
     {
-      title: '4. Lists & For Each Loops (v0.2)',
-      desc: 'Create lists with [], append with add, and iterate with for each.',
-      code: 'set scores to [80, 90, 75]\nadd 100 to scores\nfor each s in scores\n    say s\nend',
-      insert: 'set items to ["Apple", "Orange", "Banana"]\nfor each item in items\n    say item\nend\n'
+      id: 'lists',
+      tag: 'LISTS',
+      title: '4. Lists & For Each Iteration',
+      desc: 'Create lists with square brackets, append items with "add ... to", and iterate with "for each".',
+      code: `set scores to [80, 90, 75]
+add 100 to scores
+
+for each score in scores
+    say "Score item: " + score
+end`,
+      insert: `set items to ["Laptop", "Mouse", "Keyboard"]
+add "Headphones" to items
+
+for each item in items
+    say "Item in cart: " + item
+end
+`
     },
     {
-      title: '5. List & Text Helpers (v0.2)',
-      desc: 'Convenient 1-indexed English helpers.',
+      id: 'helpers',
+      tag: 'HELPERS',
+      title: '5. Text & List Built-in Helpers',
+      desc: 'Convenient 1-indexed English shortcuts for reading lengths, items, and letter casing.',
       bulletPoints: [
-        'length of <list or text>',
-        'first of <list or text>',
-        'last of <list or text>',
-        'item 2 of <list or text> (1-indexed)',
-        'uppercase of <text>',
-        'lowercase of <text>'
+        'length of <list or text> — Total count of items or characters',
+        'first of <list or text> — The first element or letter',
+        'last of <list or text> — The last element or letter',
+        'item 2 of <list or text> — 1-indexed element access',
+        'uppercase of <text> — Capitalize entire string',
+        'lowercase of <text> — Lowercase entire string'
       ],
-      code: 'say uppercase of "hello"\nsay length of scores\nsay first of scores\nsay item 2 of scores',
-      insert: 'say "Length: " + length of scores\nsay "First: " + first of scores\n'
+      code: `say "Upper: " + uppercase of "hello world"
+say "Length: " + length of [10, 20, 30]
+say "First: " + first of [10, 20, 30]
+say "Item 2: " + item 2 of [10, 20, 30]`,
+      insert: 'set fruits to ["Apple", "Banana", "Cherry"]\nsay "Count: " + length of fruits\nsay "First fruit: " + first of fruits\nsay "Second fruit: " + item 2 of fruits\n'
     },
     {
-      title: '6. Chained Conditionals (v0.2)',
-      desc: 'Branch logic using if ... otherwise if ... otherwise ... end.',
-      code: 'if age is between 13 and 19\n    say "teenager"\notherwise if age is at least 20\n    say "adult"\notherwise\n    say "kid"\nend',
-      insert: 'if age is between 13 and 19\n    say "teenager"\notherwise if age is at least 20\n    say "adult"\notherwise\n    say "kid"\nend\n'
+      id: 'conditionals',
+      tag: 'LOGIC',
+      title: '6. Chained Conditionals',
+      desc: 'Branch logic naturally with "if", "otherwise if", "otherwise", and "end".',
+      code: `if age is between 13 and 19
+    say "Status: Teenager"
+otherwise if age is at least 20
+    say "Status: Adult"
+otherwise
+    say "Status: Kid"
+end`,
+      insert: `set age to 16
+if age is between 13 and 19
+    say "Status: Teenager"
+otherwise if age is at least 20
+    say "Status: Adult"
+otherwise
+    say "Status: Kid"
+end
+`
     },
     {
-      title: '7. English Comparisons & Math Words (v0.2)',
-      desc: 'Natural phrasing instead of cryptic symbols:',
+      id: 'comparisons',
+      tag: 'OPERATORS',
+      title: '7. English Comparisons & Math Words',
+      desc: 'Readable English words replace complex symbolic operators.',
       bulletPoints: [
-        'is between 13 and 19',
+        'is between A and B — Inclusive range comparison',
         'is above / is greater than (>)',
         'is below / is less than (<)',
         'is at least (>=) / is at most (<=)',
@@ -59,45 +129,91 @@ export default function GrammarDocs({ onInsert }) {
         'is not equal to / is different from (!=)',
         'plus (+), minus (-), multiplied by (*), divided by (/)'
       ],
-      code: 'set total to a plus (b multiplied by 2)\nif score is between 80 and 100\n    say "Honors"\nend',
-      insert: 'if score is between 80 and 100\n    say "Grade: A"\nend\n'
+      code: `set total to base plus (rate multiplied by 2)
+if score is between 80 and 100
+    say "Honor student!"
+end`,
+      insert: 'if score is at least 90 and score is at most 100\n    say "Grade: A"\nend\n'
+    },
+    {
+      id: 'loops',
+      tag: 'LOOPS',
+      title: '8. Repeat & While Loops',
+      desc: 'Traditional loop constructs for repeating fixed counts or conditional loops.',
+      code: `repeat 3 times
+    say "Echo!"
+end
+
+set count to 1
+while count is at most 5
+    say count
+    increase count by 1
+end`,
+      insert: 'repeat 3 times\n    say "Hello from Plain!"\nend\n'
     }
   ];
 
+  const handleInsert = (code, idx) => {
+    onInsert(code);
+    setCopiedSection(idx);
+    setTimeout(() => setCopiedSection(null), 1500);
+  };
+
   return (
     <div className="grammar-guide">
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-cyan)', marginBottom: '4px' }}>
-        <BookOpen size={18} />
-        <h2 style={{ fontSize: '15px', fontWeight: 600 }}>Plain Language Reference (v0.2)</h2>
-      </div>
-      <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-        Plain v0.2 brings functions, lists, user input, helpers, and chained conditionals. Click "Insert" on any card to insert snippet at your cursor.
-      </p>
-
-      {sections.map((sec, idx) => (
-        <div key={idx} className="grammar-card">
-          <h3>{sec.title}</h3>
-          <p>{sec.desc}</p>
-          {sec.bulletPoints && (
-            <ul style={{ fontSize: '12px', color: '#94a3b8', margin: '4px 0 10px 18px', lineHeight: 1.6 }}>
-              {sec.bulletPoints.map((b, bIdx) => (
-                <li key={bIdx}><code>{b}</code></li>
-              ))}
-            </ul>
-          )}
-          <div className="grammar-code-box">
-            <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{sec.code}</pre>
-            <button
-              className="btn-insert-code"
-              onClick={() => onInsert(sec.insert || sec.code + '\n')}
-              title="Insert into editor"
-            >
-              <PlusCircle size={12} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
-              Insert
-            </button>
-          </div>
+      <div className="reference-header-card">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-cyan)' }}>
+          <BookOpen size={16} />
+          <h3 style={{ fontSize: '14px', fontWeight: 700, letterSpacing: '0.02em' }}>
+            Plain Language Reference (v0.2)
+          </h3>
         </div>
-      ))}
+        <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', lineHeight: 1.5 }}>
+          Plain turns basic English sentences into working programs. Explore syntax rules below or click <strong>Insert</strong> to test directly in your editor.
+        </p>
+      </div>
+
+      <div className="reference-cards-list">
+        {sections.map((sec, idx) => (
+          <div key={sec.id} className="grammar-card">
+            <div className="grammar-card-top">
+              <span className="grammar-tag-badge">{sec.tag}</span>
+              <span className="grammar-card-title">{sec.title}</span>
+            </div>
+
+            <p className="grammar-card-desc">{sec.desc}</p>
+
+            {sec.bulletPoints && (
+              <ul className="grammar-bullet-list">
+                {sec.bulletPoints.map((b, bIdx) => (
+                  <li key={bIdx}>{b}</li>
+                ))}
+              </ul>
+            )}
+
+            <div className="grammar-code-box">
+              <pre><code>{sec.code}</code></pre>
+              <button
+                className={`btn-insert-code ${copiedSection === idx ? 'copied' : ''}`}
+                onClick={() => handleInsert(sec.insert || sec.code + '\n', idx)}
+                title="Insert snippet into code editor"
+              >
+                {copiedSection === idx ? (
+                  <>
+                    <Check size={11} />
+                    <span>Inserted</span>
+                  </>
+                ) : (
+                  <>
+                    <PlusCircle size={11} />
+                    <span>Insert</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

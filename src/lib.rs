@@ -7,6 +7,8 @@ use interpreter::Interpreter;
 use serde::Serialize;
 use std::collections::HashMap;
 
+pub use interpreter::AskPrompt;
+
 #[derive(Serialize)]
 pub struct InspectResult {
     pub success: bool,
@@ -15,9 +17,14 @@ pub struct InspectResult {
     pub ast: Option<Vec<ast::Stmt>>,
     pub variables: HashMap<String, ast::Value>,
     pub error: Option<String>,
+    pub waiting_for_input: Option<AskPrompt>,
 }
 
 pub fn inspect_source(source: &str) -> InspectResult {
+    inspect_source_with_inputs(source, &[])
+}
+
+pub fn inspect_source_with_inputs(source: &str, inputs: &[String]) -> InspectResult {
     let tokens = match lexer::tokenize(source) {
         Ok(toks) => toks,
         Err(e) => {
@@ -28,6 +35,7 @@ pub fn inspect_source(source: &str) -> InspectResult {
                 ast: None,
                 variables: HashMap::new(),
                 error: Some(e),
+                waiting_for_input: None,
             };
         }
     };
@@ -43,14 +51,16 @@ pub fn inspect_source(source: &str) -> InspectResult {
                 ast: None,
                 variables: HashMap::new(),
                 error: Some(e),
+                waiting_for_input: None,
             };
         }
     };
 
-    let mut interpreter = Interpreter::new_silent();
+    let mut interpreter = Interpreter::new_with_inputs(inputs.to_vec(), true);
     let run_res = interpreter.run(&program);
     let variables = interpreter.get_vars();
     let output = interpreter.output;
+    let waiting_for_input = interpreter.waiting_for_input;
 
     match run_res {
         Ok(()) => InspectResult {
@@ -60,6 +70,7 @@ pub fn inspect_source(source: &str) -> InspectResult {
             ast: Some(program),
             variables,
             error: None,
+            waiting_for_input,
         },
         Err(e) => InspectResult {
             success: false,
@@ -68,6 +79,7 @@ pub fn inspect_source(source: &str) -> InspectResult {
             ast: Some(program),
             variables,
             error: Some(e),
+            waiting_for_input,
         },
     }
 }

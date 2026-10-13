@@ -42,7 +42,21 @@ fn main() -> ExitCode {
             buf
         };
 
-        let result = inspect_source(&source);
+        let (code, inputs) = if let Ok(val) = serde_json::from_str::<serde_json::Value>(&source) {
+            if let Some(c) = val.get("code").and_then(|v| v.as_str()) {
+                let ins: Vec<String> = val.get("inputs")
+                    .and_then(|v| v.as_array())
+                    .map(|arr| arr.iter().filter_map(|x| x.as_str().map(|s| s.to_string())).collect())
+                    .unwrap_or_default();
+                (c.to_string(), ins)
+            } else {
+                (source.clone(), Vec::new())
+            }
+        } else {
+            (source.clone(), Vec::new())
+        };
+
+        let result = plain_lang::inspect_source_with_inputs(&code, &inputs);
         if let Ok(json) = serde_json::to_string(&result) {
             println!("{}", json);
         }
@@ -66,6 +80,7 @@ fn main() -> ExitCode {
                     ast: None,
                     variables: HashMap::new(),
                     error: Some(format!("Could not read {}: {}", path, e)),
+                    waiting_for_input: None,
                 };
                 let _ = serde_json::to_string(&err_res).map(|j| println!("{}", j));
                 return ExitCode::FAILURE;

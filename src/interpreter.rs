@@ -3,6 +3,14 @@ use crate::ast::{BinOp, Expr, Stmt, Value};
 use std::collections::HashMap;
 use std::io::{self, BufRead, Write};
 
+use serde::Serialize;
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct AskPrompt {
+    pub variable: String,
+    pub prompt: String,
+}
+
 #[derive(Clone)]
 struct FunctionDef {
     params: Vec<String>,
@@ -19,6 +27,9 @@ pub struct Interpreter {
     functions: HashMap<String, FunctionDef>,
     pub output: Vec<String>,
     pub silent: bool,
+    pub inputs: Vec<String>,
+    pub input_index: usize,
+    pub waiting_for_input: Option<AskPrompt>,
 }
 
 impl Default for Interpreter {
@@ -36,6 +47,9 @@ impl Interpreter {
             functions: HashMap::new(),
             output: Vec::new(),
             silent: false,
+            inputs: Vec::new(),
+            input_index: 0,
+            waiting_for_input: None,
         }
     }
 
@@ -47,6 +61,23 @@ impl Interpreter {
             functions: HashMap::new(),
             output: Vec::new(),
             silent: true,
+            inputs: Vec::new(),
+            input_index: 0,
+            waiting_for_input: None,
+        }
+    }
+
+    pub fn new_with_inputs(inputs: Vec<String>, silent: bool) -> Self {
+        let mut scopes = Vec::new();
+        scopes.push(HashMap::new());
+        Interpreter {
+            scopes,
+            functions: HashMap::new(),
+            output: Vec::new(),
+            silent,
+            inputs,
+            input_index: 0,
+            waiting_for_input: None,
         }
     }
 
@@ -166,10 +197,46 @@ impl Interpreter {
             Stmt::Ask { name, prompt } => {
                 let prompt_val = self.eval(prompt)?;
                 let prompt_str = prompt_val.to_string();
-                if !self.silent {
-                    print!("{} ", prompt_str);
-                    let _ = io::stdout().flush();
+
+                // If input was provided via inputs list (e.g. from IDE terminal submission or script)
+                if self.input_index < self.inputs.len() {
+                    let input_str = self.inputs[self.input_index].clone();
+                    self.input_index += 1;
+                    let trimmed = input_str.trim();
+
+                    let val = if let Ok(num) = trimmed.parse::<f64>() {
+                        Value::Number(num)
+                    } else {
+                        Value::Text(trimmed.to_string())
+                    };
+
+                    if !self.silent {
+                        println!("{} {}", prompt_str, trimmed);
+                    }
+                    if self.output.len() < 5000 {
+                        self.output.push(format!("{} {}", prompt_str, trimmed));
+                    }
+                    self.set_var(name.clone(), val);
+                    return Ok(Flow::None);
                 }
+
+                // If in silent inspection/IDE mode and no input has been provided yet:
+                // Record the prompt and pause execution so the IDE can ask the user!
+                if self.silent {
+                    if self.output.len() < 5000 {
+                        self.output.push(prompt_str.clone());
+                    }
+                    self.waiting_for_input = Some(AskPrompt {
+                        variable: name.clone(),
+                        prompt: prompt_str,
+                    });
+                    // Stop further execution cleanly so IDE terminal can display input prompt
+                    return Ok(Flow::Return(Value::Text("".to_string())));
+                }
+
+                // In interactive CLI mode
+                print!("{} ", prompt_str);
+                let _ = io::stdout().flush();
 
                 let mut input = String::new();
                 let stdin = io::stdin();

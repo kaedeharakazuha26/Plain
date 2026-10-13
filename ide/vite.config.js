@@ -119,8 +119,8 @@ function plainLanguagePlugin() {
               }));
             });
 
-            // Write source code to child's stdin
-            child.stdin.write(code);
+            // Write payload (code & inputs) to child's stdin
+            child.stdin.write(body);
             child.stdin.end();
           });
 

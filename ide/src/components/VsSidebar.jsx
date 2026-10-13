@@ -18,7 +18,8 @@ export default function VsSidebar({
   onSelectFile,
   onCloseFile,
   onCreateFile,
-  onDeleteFile
+  onDeleteFile,
+  width
 }) {
   const [examplesOpen, setExamplesOpen] = useState(true);
   const [openEditorsOpen, setOpenEditorsOpen] = useState(true);
@@ -43,7 +44,7 @@ export default function VsSidebar({
   const userFiles = files.filter(f => f.category !== 'examples');
 
   return (
-    <aside className="vs-sidebar">
+    <aside className="vs-sidebar" style={width ? { width: `${width}px` } : undefined}>
       <div className="sidebar-header">
         <span>Explorer: Plain-Lang</span>
         <div className="sidebar-actions">
