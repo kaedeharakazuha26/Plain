@@ -18,6 +18,7 @@ export default function SentenceBar({ onInsert }) {
 
   const categories = [
     { id: 'all', label: 'All' },
+    { id: 'modules', label: 'Imports' },
     { id: 'io', label: 'Input & Say' },
     { id: 'vars', label: 'Variables' },
     { id: 'functions', label: 'Functions' },
@@ -27,13 +28,35 @@ export default function SentenceBar({ onInsert }) {
   ];
 
   const snippets = [
+    // Multi-file Modules & Imports
+    {
+      category: 'modules',
+      keyword: 'import',
+      title: 'Import another Plain file',
+      description: 'Imports another .plain file to call its functions and access its shared variables.',
+      code: 'import "examples/math_utils.plain"\n\nset doubled to call double_number with 21\nsay "21 doubled is: " + doubled\n'
+    },
+    {
+      category: 'modules',
+      keyword: 'include',
+      title: 'Include helper module',
+      description: 'Alternative English syntax to import reusable module code.',
+      code: 'include "helpers.plain"\n\ncall setup_environment\n'
+    },
     // Interactive I/O
     {
       category: 'io',
       keyword: 'ask',
-      title: 'Ask for user input',
+      title: 'Ask for text input',
       description: 'Prompts the user interactively in the terminal and stores the answer in a variable.',
       code: 'ask user_name with "What is your name?"\nsay "Hello, " + user_name\n'
+    },
+    {
+      category: 'io',
+      keyword: 'ask number',
+      title: 'Ask for number and do math',
+      description: 'Prompts the user for a number. Automatically parsed as numeric so you can calculate with it immediately.',
+      code: 'ask user_age with "How old are you?"\nsay "In 5 years you will be: " + (user_age plus 5)\n'
     },
     {
       category: 'io',
@@ -88,6 +111,13 @@ export default function SentenceBar({ onInsert }) {
     },
     {
       category: 'functions',
+      keyword: 'define multi-arg',
+      title: 'Function with multiple arguments',
+      description: 'Defines a custom function that takes multiple comma-separated arguments after with.',
+      code: 'define calc_area with length, width\n    return length multiplied by width\nend\n\nset room_area to call calc_area with 12, 10\nsay "Room area: " + room_area\n'
+    },
+    {
+      category: 'functions',
       keyword: 'return',
       title: 'Return from function (v0.2)',
       description: 'Returns a calculated value back to the caller.',
@@ -100,6 +130,13 @@ export default function SentenceBar({ onInsert }) {
       title: 'Create a list (v0.2)',
       description: 'Initializes a list with square bracket notation.',
       code: 'set scores to [85, 92, 78]\n'
+    },
+    {
+      category: 'lists',
+      keyword: 'item of',
+      title: 'Access item by 1-indexed number',
+      description: 'Pulls a specific element from a list starting from index 1.',
+      code: 'set inventory to ["Sword", "Shield", "Potion"]\nsay "Equipped: " + item 1 of inventory\nsay "Secondary: " + item 2 of inventory\n'
     },
     {
       category: 'lists',

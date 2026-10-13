@@ -1,5 +1,5 @@
-// Parser: tokens -> AST for Plain v0.2
-use crate::ast::{BinOp, Expr, Stmt, Value};
+// Parser: tokens -> AST for Plain v0.4
+use crate::ast::{BinOp, Expr, InterpolatePart, Stmt, Value};
 use crate::lexer::{Token, TokenKind};
 
 pub struct Parser {
@@ -105,19 +105,45 @@ impl Parser {
         match self.peek().clone() {
             TokenKind::Set | TokenKind::Change => {
                 self.next();
-                let name = match self.next().kind {
+                let first_ident = match self.next().kind {
                     TokenKind::Ident(n) => n,
+                    TokenKind::Sum => "sum".to_string(),
                     other => {
                         return Err(format!(
-                            "Line {}: 'set' needs a variable name, found {:?}",
+                            "Line {}: 'set' needs a variable or field name, found {:?}",
                             self.line(),
                             other
                         ))
                     }
                 };
-                self.expect(TokenKind::To)?;
-                let value = self.parse_expr()?;
-                Ok(Stmt::Set { name, value })
+
+                // Check for field path: set city of address of person to "Manila"
+                if *self.peek() == TokenKind::Of {
+                    let mut idents = vec![first_ident];
+                    while *self.peek() == TokenKind::Of {
+                        self.next(); // consume 'of'
+                        match self.next().kind {
+                            TokenKind::Ident(n) => idents.push(n),
+                            TokenKind::Sum => idents.push("sum".to_string()),
+                            other => {
+                                return Err(format!(
+                                    "Line {}: expected record/field name after 'of', found {:?}",
+                                    self.line(),
+                                    other
+                                ))
+                            }
+                        }
+                    }
+                    self.expect(TokenKind::To)?;
+                    let value = self.parse_expr()?;
+                    let root = idents.pop().unwrap();
+                    idents.reverse();
+                    Ok(Stmt::SetField { root, path: idents, value })
+                } else {
+                    self.expect(TokenKind::To)?;
+                    let value = self.parse_expr()?;
+                    Ok(Stmt::Set { name: first_ident, value })
+                }
             }
 
             TokenKind::Say => {
@@ -145,11 +171,11 @@ impl Parser {
                 Ok(Stmt::While { condition, body })
             }
 
-            // v0.2: ask name with "Prompt"
             TokenKind::Ask => {
                 self.next();
                 let name = match self.next().kind {
                     TokenKind::Ident(n) => n,
+                    TokenKind::Sum => "sum".to_string(),
                     other => return Err(format!("Line {}: 'ask' needs a variable name, found {:?}", self.line(), other)),
                 };
                 self.expect(TokenKind::With)?;
@@ -157,11 +183,11 @@ impl Parser {
                 Ok(Stmt::Ask { name, prompt })
             }
 
-            // v0.2: define greet with name, age ... end
             TokenKind::Define => {
                 self.next();
                 let name = match self.next().kind {
                     TokenKind::Ident(n) => n,
+                    TokenKind::Sum => "sum".to_string(),
                     other => return Err(format!("Line {}: 'define' needs a function name, found {:?}", self.line(), other)),
                 };
 
@@ -171,6 +197,7 @@ impl Parser {
                     loop {
                         match self.next().kind {
                             TokenKind::Ident(p) => params.push(p),
+                            TokenKind::Sum => params.push("sum".to_string()),
                             other => return Err(format!("Line {}: expected parameter name after 'with', found {:?}", self.line(), other)),
                         }
                         if *self.peek() == TokenKind::Comma {
@@ -186,7 +213,6 @@ impl Parser {
                 Ok(Stmt::Define { name, params, body })
             }
 
-            // v0.2: return <expr>
             TokenKind::Return => {
                 self.next();
                 let expr = if matches!(self.peek(), TokenKind::Newline | TokenKind::Eof | TokenKind::End | TokenKind::Otherwise) {
@@ -197,11 +223,11 @@ impl Parser {
                 Ok(Stmt::Return { expr })
             }
 
-            // v0.2: call greet with "jhomar"
             TokenKind::Call => {
                 self.next();
                 let name = match self.next().kind {
                     TokenKind::Ident(n) => n,
+                    TokenKind::Sum => "sum".to_string(),
                     other => return Err(format!("Line {}: 'call' needs a function name, found {:?}", self.line(), other)),
                 };
 
@@ -220,38 +246,87 @@ impl Parser {
                 Ok(Stmt::Call { name, args })
             }
 
-            // v0.2: add 100 to scores
             TokenKind::Add => {
                 self.next();
                 let value = self.parse_expr()?;
                 self.expect(TokenKind::To)?;
                 let target = match self.next().kind {
                     TokenKind::Ident(n) => n,
+                    TokenKind::Sum => "sum".to_string(),
                     other => return Err(format!("Line {}: 'add ... to' needs a target variable name, found {:?}", self.line(), other)),
                 };
                 Ok(Stmt::Add { value, target })
             }
 
-            // v0.2: for each score in scores ... end
+            TokenKind::Remove => {
+                self.next();
+                if *self.peek() == TokenKind::Item {
+                    self.next();
+                    let index = self.parse_expr()?;
+                    self.expect(TokenKind::From)?;
+                    let target = match self.next().kind {
+                        TokenKind::Ident(n) => n,
+                        TokenKind::Sum => "sum".to_string(),
+                        other => return Err(format!("Line {}: 'remove item ... from' needs a target variable name, found {:?}", self.line(), other)),
+                    };
+                    Ok(Stmt::RemoveItem { index, target })
+                } else {
+                    let value = self.parse_expr()?;
+                    self.expect(TokenKind::From)?;
+                    let target = match self.next().kind {
+                        TokenKind::Ident(n) => n,
+                        TokenKind::Sum => "sum".to_string(),
+                        other => return Err(format!("Line {}: 'remove ... from' needs a target variable name, found {:?}", self.line(), other)),
+                    };
+                    Ok(Stmt::Remove { value, target })
+                }
+            }
+
+            TokenKind::Sort => {
+                self.next();
+                let target = match self.next().kind {
+                    TokenKind::Ident(n) => n,
+                    TokenKind::Sum => "sum".to_string(),
+                    other => return Err(format!("Line {}: 'sort' needs a variable name, found {:?}", self.line(), other)),
+                };
+                let descending = if *self.peek() == TokenKind::Descending {
+                    self.next();
+                    true
+                } else {
+                    false
+                };
+                Ok(Stmt::Sort { target, descending })
+            }
+
             TokenKind::For => {
                 self.next();
                 self.expect(TokenKind::Each)?;
                 let item_name = match self.next().kind {
+                    TokenKind::Sum => "sum".to_string(),
                     TokenKind::Ident(n) => n,
                     other => return Err(format!("Line {}: 'for each' needs an item variable name, found {:?}", self.line(), other)),
                 };
                 self.expect(TokenKind::In)?;
-                let list = self.parse_expr()?;
-                let body = self.parse_block(&[TokenKind::End])?;
-                self.expect(TokenKind::End)?;
-                Ok(Stmt::ForEach { item_name, list, body })
+
+                if *self.peek() == TokenKind::File {
+                    self.next();
+                    let path = self.parse_expr()?;
+                    let body = self.parse_block(&[TokenKind::End])?;
+                    self.expect(TokenKind::End)?;
+                    Ok(Stmt::ForEachLine { item_name, path, body })
+                } else {
+                    let list = self.parse_expr()?;
+                    let body = self.parse_block(&[TokenKind::End])?;
+                    self.expect(TokenKind::End)?;
+                    Ok(Stmt::ForEach { item_name, list, body })
+                }
             }
 
-            // v0.2: increase lives / increase lives by 2
             TokenKind::Increase => {
                 self.next();
                 let name = match self.next().kind {
                     TokenKind::Ident(n) => n,
+                    TokenKind::Sum => "sum".to_string(),
                     other => return Err(format!("Line {}: 'increase' needs a variable name, found {:?}", self.line(), other)),
                 };
                 let by = if *self.peek() == TokenKind::By {
@@ -263,11 +338,11 @@ impl Parser {
                 Ok(Stmt::Increase { name, by })
             }
 
-            // v0.2: decrease lives / decrease lives by 1
             TokenKind::Decrease => {
                 self.next();
                 let name = match self.next().kind {
                     TokenKind::Ident(n) => n,
+                    TokenKind::Sum => "sum".to_string(),
                     other => return Err(format!("Line {}: 'decrease' needs a variable name, found {:?}", self.line(), other)),
                 };
                 let by = if *self.peek() == TokenKind::By {
@@ -279,7 +354,37 @@ impl Parser {
                 Ok(Stmt::Decrease { name, by })
             }
 
-            // import "other.plain" / import file "other.plain"
+            TokenKind::Save => {
+                self.next();
+                let content = self.parse_expr()?;
+                self.expect(TokenKind::To)?;
+                self.expect(TokenKind::File)?;
+                let path = self.parse_expr()?;
+                Ok(Stmt::SaveFile { content, path })
+            }
+
+            TokenKind::Append => {
+                self.next();
+                let content = self.parse_expr()?;
+                self.expect(TokenKind::To)?;
+                self.expect(TokenKind::File)?;
+                let path = self.parse_expr()?;
+                Ok(Stmt::AppendFile { content, path })
+            }
+
+            TokenKind::Load => {
+                self.next();
+                let target = match self.next().kind {
+                    TokenKind::Ident(n) => n,
+                    TokenKind::Sum => "sum".to_string(),
+                    other => return Err(format!("Line {}: 'load' needs a variable name, found {:?}", self.line(), other)),
+                };
+                self.expect(TokenKind::From)?;
+                self.expect(TokenKind::File)?;
+                let path = self.parse_expr()?;
+                Ok(Stmt::LoadFile { target, path })
+            }
+
             TokenKind::Import => {
                 self.next();
                 if *self.peek() == TokenKind::File {
@@ -356,6 +461,23 @@ impl Parser {
                 self.next();
                 let right = self.parse_additive()?;
                 Ok(Expr::Binary(Box::new(left), BinOp::Ne, Box::new(right)))
+            }
+            TokenKind::Contains => {
+                self.next();
+                let right = self.parse_additive()?;
+                Ok(Expr::Binary(Box::new(left), BinOp::Contains, Box::new(right)))
+            }
+            TokenKind::Starts => {
+                self.next();
+                self.expect(TokenKind::With)?;
+                let right = self.parse_additive()?;
+                Ok(Expr::Binary(Box::new(left), BinOp::StartsWith, Box::new(right)))
+            }
+            TokenKind::Ends => {
+                self.next();
+                self.expect(TokenKind::With)?;
+                let right = self.parse_additive()?;
+                Ok(Expr::Binary(Box::new(left), BinOp::EndsWith, Box::new(right)))
             }
             TokenKind::Is => {
                 self.next(); // consume 'is'
@@ -479,7 +601,76 @@ impl Parser {
         }
     }
 
+    fn parse_interpolated_string(&self, raw: &str, line: usize) -> Result<Expr, String> {
+        let chars: Vec<char> = raw.chars().collect();
+        let mut parts = Vec::new();
+        let mut current_lit = String::new();
+        let mut i = 0;
+        let mut has_interp = false;
+
+        while i < chars.len() {
+            if chars[i] == '{' {
+                if i + 1 < chars.len() && chars[i + 1] == '{' {
+                    current_lit.push('{');
+                    i += 2;
+                } else {
+                    has_interp = true;
+                    if !current_lit.is_empty() {
+                        parts.push(InterpolatePart::Literal(current_lit.clone()));
+                        current_lit.clear();
+                    }
+                    i += 1;
+                    let mut expr_str = String::new();
+                    let mut found_end = false;
+                    while i < chars.len() {
+                        if chars[i] == '}' {
+                            found_end = true;
+                            i += 1;
+                            break;
+                        }
+                        expr_str.push(chars[i]);
+                        i += 1;
+                    }
+                    if !found_end {
+                        return Err(format!("Line {}: unclosed '{{' in string interpolation", line));
+                    }
+                    let trimmed = expr_str.trim();
+                    if trimmed.is_empty() {
+                        return Err(format!("Line {}: empty '{{}}' in string interpolation", line));
+                    }
+                    let sub_tokens = crate::lexer::tokenize(trimmed)
+                        .map_err(|e| format!("Line {}: in interpolation '{{{}}}': {}", line, trimmed, e))?;
+                    let mut sub_parser = Parser::new(sub_tokens);
+                    let expr = sub_parser.parse_expr()
+                        .map_err(|e| format!("Line {}: in interpolation '{{{}}}': {}", line, trimmed, e))?;
+                    parts.push(InterpolatePart::Expr(expr));
+                }
+            } else if chars[i] == '}' {
+                if i + 1 < chars.len() && chars[i + 1] == '}' {
+                    current_lit.push('}');
+                    i += 2;
+                } else {
+                    return Err(format!("Line {}: unexpected '}}' in string (use '}}}}' for literal '}}')", line));
+                }
+            } else {
+                current_lit.push(chars[i]);
+                i += 1;
+            }
+        }
+
+        if !has_interp {
+            return Ok(Expr::Literal(Value::Text(current_lit)));
+        }
+
+        if !current_lit.is_empty() {
+            parts.push(InterpolatePart::Literal(current_lit));
+        }
+
+        Ok(Expr::InterpolatedText(parts))
+    }
+
     fn parse_primary(&mut self) -> Result<Expr, String> {
+        let line = self.line();
         match self.peek().clone() {
             TokenKind::Number(n) => {
                 self.next();
@@ -487,7 +678,7 @@ impl Parser {
             }
             TokenKind::Text(s) => {
                 self.next();
-                Ok(Expr::Literal(Value::Text(s)))
+                self.parse_interpolated_string(&s, line)
             }
             TokenKind::True => {
                 self.next();
@@ -504,7 +695,6 @@ impl Parser {
                 Ok(expr)
             }
 
-            // v0.2: list literal [80, 90, 75]
             TokenKind::LBracket => {
                 self.next();
                 let mut items = Vec::new();
@@ -520,7 +710,46 @@ impl Parser {
                 Ok(Expr::List(items))
             }
 
-            // v0.2: call sum_of with 5, 3 (as expression)
+            // Records: record with name "Ana", age 20
+            TokenKind::Record => {
+                self.next();
+                if *self.peek() == TokenKind::With {
+                    self.next();
+                }
+                let mut fields = Vec::new();
+                loop {
+                    let field_name = match self.peek().clone() {
+                        TokenKind::Ident(n) => {
+                            self.next();
+                            n
+                        }
+                        TokenKind::Sum => {
+                            self.next();
+                            "sum".to_string()
+                        }
+                        _ => break,
+                    };
+                    let val_expr = self.parse_expr()?;
+                    fields.push((field_name, val_expr));
+
+                    if *self.peek() == TokenKind::Comma {
+                        if self.pos + 1 < self.tokens.len() {
+                            match &self.tokens[self.pos + 1].kind {
+                                TokenKind::Ident(_) | TokenKind::Sum => {
+                                    self.next(); // consume comma
+                                }
+                                _ => break,
+                            }
+                        } else {
+                            break;
+                        }
+                    } else {
+                        break;
+                    }
+                }
+                Ok(Expr::Record(fields))
+            }
+
             TokenKind::Call => {
                 self.next();
                 let name = match self.next().kind {
@@ -542,7 +771,6 @@ impl Parser {
                 Ok(Expr::Call { name, args })
             }
 
-            // v0.2: uppercase of <expr>
             TokenKind::Uppercase => {
                 self.next();
                 self.expect(TokenKind::Of)?;
@@ -550,7 +778,6 @@ impl Parser {
                 Ok(Expr::Uppercase(Box::new(inner)))
             }
 
-            // v0.2: lowercase of <expr>
             TokenKind::Lowercase => {
                 self.next();
                 self.expect(TokenKind::Of)?;
@@ -558,7 +785,6 @@ impl Parser {
                 Ok(Expr::Lowercase(Box::new(inner)))
             }
 
-            // v0.2: length of <expr>
             TokenKind::Length => {
                 self.next();
                 self.expect(TokenKind::Of)?;
@@ -566,7 +792,6 @@ impl Parser {
                 Ok(Expr::LengthOf(Box::new(inner)))
             }
 
-            // v0.2: first of <expr>
             TokenKind::First => {
                 self.next();
                 self.expect(TokenKind::Of)?;
@@ -574,7 +799,6 @@ impl Parser {
                 Ok(Expr::FirstOf(Box::new(inner)))
             }
 
-            // v0.2: last of <expr>
             TokenKind::Last => {
                 self.next();
                 self.expect(TokenKind::Of)?;
@@ -582,7 +806,6 @@ impl Parser {
                 Ok(Expr::LastOf(Box::new(inner)))
             }
 
-            // v0.2: item <index> of <expr>
             TokenKind::Item => {
                 self.next();
                 let index = self.parse_primary()?;
@@ -594,9 +817,114 @@ impl Parser {
                 })
             }
 
+            TokenKind::Sum => {
+                self.next();
+                if *self.peek() == TokenKind::Of {
+                    self.next();
+                    let target = self.parse_primary()?;
+                    Ok(Expr::SumOf(Box::new(target)))
+                } else {
+                    Ok(Expr::Variable("sum".to_string()))
+                }
+            }
+
+            TokenKind::Average => {
+                self.next();
+                self.expect(TokenKind::Of)?;
+                let target = self.parse_primary()?;
+                Ok(Expr::AverageOf(Box::new(target)))
+            }
+
+            TokenKind::Smallest => {
+                self.next();
+                self.expect(TokenKind::Of)?;
+                let target = self.parse_primary()?;
+                Ok(Expr::SmallestOf(Box::new(target)))
+            }
+
+            TokenKind::Largest => {
+                self.next();
+                self.expect(TokenKind::Of)?;
+                let target = self.parse_primary()?;
+                Ok(Expr::LargestOf(Box::new(target)))
+            }
+
+            TokenKind::Reverse => {
+                self.next();
+                self.expect(TokenKind::Of)?;
+                let target = self.parse_primary()?;
+                Ok(Expr::ReverseOf(Box::new(target)))
+            }
+
+            TokenKind::Trim => {
+                self.next();
+                self.expect(TokenKind::Of)?;
+                let target = self.parse_primary()?;
+                Ok(Expr::TrimOf(Box::new(target)))
+            }
+
+            TokenKind::KwNumber => {
+                self.next();
+                self.expect(TokenKind::Of)?;
+                let target = self.parse_primary()?;
+                Ok(Expr::NumberOf(Box::new(target)))
+            }
+
+            TokenKind::KwText => {
+                self.next();
+                self.expect(TokenKind::Of)?;
+                let target = self.parse_primary()?;
+                Ok(Expr::TextOf(Box::new(target)))
+            }
+
+            TokenKind::Split => {
+                self.next();
+                let string = self.parse_primary()?;
+                self.expect(TokenKind::By)?;
+                let delimiter = self.parse_primary()?;
+                Ok(Expr::Split {
+                    string: Box::new(string),
+                    delimiter: Box::new(delimiter),
+                })
+            }
+
+            TokenKind::Join => {
+                self.next();
+                let list = self.parse_primary()?;
+                self.expect(TokenKind::With)?;
+                let delimiter = self.parse_primary()?;
+                Ok(Expr::Join {
+                    list: Box::new(list),
+                    delimiter: Box::new(delimiter),
+                })
+            }
+
+            TokenKind::Replace => {
+                self.next();
+                let find = self.parse_primary()?;
+                self.expect(TokenKind::With)?;
+                let replacement = self.parse_primary()?;
+                self.expect(TokenKind::In)?;
+                let target = self.parse_primary()?;
+                Ok(Expr::Replace {
+                    find: Box::new(find),
+                    replacement: Box::new(replacement),
+                    target: Box::new(target),
+                })
+            }
+
             TokenKind::Ident(name) => {
                 self.next();
-                Ok(Expr::Variable(name))
+                if *self.peek() == TokenKind::Of {
+                    self.next();
+                    let target = self.parse_primary()?;
+                    Ok(Expr::FieldAccess {
+                        target: Box::new(target),
+                        field: name,
+                    })
+                } else {
+                    Ok(Expr::Variable(name))
+                }
             }
 
             other => Err(format!(

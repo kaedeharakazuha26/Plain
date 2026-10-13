@@ -29,7 +29,12 @@ decrease health by 10`,
       id: 'io',
       tag: 'INPUT & OUTPUT',
       title: '2. Interactive Terminal Input & Output',
-      desc: 'Prompt the user interactively in the bottom terminal. Type answers right into the console prompt!',
+      desc: 'Prompt the user interactively in the terminal. Type answers right into the console prompt!',
+      bulletPoints: [
+        'ask <var> with "<prompt>" — Pauses execution and waits for user answer in the terminal',
+        'Typed numbers are automatically parsed as numeric values for direct calculations',
+        'say <expr> — Outputs strings, variables, or math results to the console'
+      ],
       code: `ask user_name with "What is your name?"
 say "Hello, " + user_name
 
@@ -41,7 +46,12 @@ say "Next year you will be: " + (age plus 1)`,
       id: 'functions',
       tag: 'FUNCTIONS',
       title: '3. Functions & Isolated Scope',
-      desc: 'Define functions with parameters, local variables, and return values.',
+      desc: 'Define custom functions with parameters, local variables, and return values.',
+      bulletPoints: [
+        'define <name> with <arg1>, <arg2> ... end — Declares function with isolated scope',
+        'return <expr> — Returns calculated values cleanly back to the caller',
+        'call <name> with <arg1>, <arg2> — Invokes the function with arguments'
+      ],
       code: `define add_numbers with a, b
     return a plus b
 end
@@ -60,6 +70,12 @@ call greet with "jhomar"
       tag: 'MODULES & IMPORTS',
       title: '4. Multi-File Imports & Integration',
       desc: 'Import another .plain file to call its functions and access its shared variables.',
+      bulletPoints: [
+        'import "<path.plain>" / include "<path>" — Imports module into current workspace',
+        'Functions defined in imported files are immediately callable with "call"',
+        'Top-level variables in imported files become accessible in the caller',
+        'Safe execution with automatic circular-import detection'
+      ],
       code: `import "examples/math_utils.plain"
 
 set doubled to call double_number with 21
@@ -72,8 +88,13 @@ say "Result: " + doubled
     {
       id: 'lists',
       tag: 'LISTS',
-      title: '4. Lists & For Each Iteration',
+      title: '5. Lists & For Each Iteration',
       desc: 'Create lists with square brackets, append items with "add ... to", and iterate with "for each".',
+      bulletPoints: [
+        '[item1, item2] — Bracket notation for initializing lists',
+        'add <val> to <list> — Appends element to the list',
+        'for each <item> in <list> ... end — Iterates through elements'
+      ],
       code: `set scores to [80, 90, 75]
 add 100 to scores
 
@@ -91,7 +112,7 @@ end
     {
       id: 'helpers',
       tag: 'HELPERS',
-      title: '5. Text & List Built-in Helpers',
+      title: '6. Text & List Built-in Helpers',
       desc: 'Convenient 1-indexed English shortcuts for reading lengths, items, and letter casing.',
       bulletPoints: [
         'length of <list or text> — Total count of items or characters',
@@ -110,7 +131,7 @@ say "Item 2: " + item 2 of [10, 20, 30]`,
     {
       id: 'conditionals',
       tag: 'LOGIC',
-      title: '6. Chained Conditionals',
+      title: '7. Chained Conditionals',
       desc: 'Branch logic naturally with "if", "otherwise if", "otherwise", and "end".',
       code: `if age is between 13 and 19
     say "Status: Teenager"
@@ -132,7 +153,7 @@ end
     {
       id: 'comparisons',
       tag: 'OPERATORS',
-      title: '7. English Comparisons & Math Words',
+      title: '8. English Comparisons & Math Words',
       desc: 'Readable English words replace complex symbolic operators.',
       bulletPoints: [
         'is between A and B — Inclusive range comparison',
@@ -152,7 +173,7 @@ end`,
     {
       id: 'loops',
       tag: 'LOOPS',
-      title: '8. Repeat & While Loops',
+      title: '9. Repeat & While Loops',
       desc: 'Traditional loop constructs for repeating fixed counts or conditional loops.',
       code: `repeat 3 times
     say "Echo!"

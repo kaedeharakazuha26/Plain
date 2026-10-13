@@ -1,0 +1,30 @@
+# Plain v0.4 Features Tour — interpolation, nested records, file lines
+
+# 1. Text Interpolation
+set user_name to "Jhomar"
+set score to 100
+say "Hello {user_name}, your score is {score}"
+
+# 2. Nested Records
+set person to record with name "Ana", address record with city "Cebu", zip 6000
+say "{name of person} lives in {city of address of person}"
+
+# Mutate nested record field
+set city of address of person to "Manila"
+say "Updated address city: {city of address of person}"
+
+# 3. Records in Lists & Iteration
+set people to [record with name "Ana", age 21, record with name "Ben", age 17]
+for each p in people
+    say "{name of p} is {age of p}"
+end
+
+# 4. File Operations — line by line
+save "Ana" to file "examples/people.txt"
+append "Ben" to file "examples/people.txt"
+append "Charlie" to file "examples/people.txt"
+
+say "--- Lines from file ---"
+for each line in file "examples/people.txt"
+    say line
+end

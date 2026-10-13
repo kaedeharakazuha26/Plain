@@ -6,7 +6,7 @@ pub enum TokenKind {
     Text(String),
     Ident(String),
 
-    // keywords
+    // v0.1 keywords
     Set,
     Say,
     If,
@@ -14,7 +14,7 @@ pub enum TokenKind {
     Repeat,
     Times,
     While,
-    Otherwise, // "otherwise" (also accepts "else")
+    Otherwise,
     End,
     To,
     Is,
@@ -63,6 +63,29 @@ pub enum TokenKind {
     Divided,
     Import,
     File,
+
+    // v0.3 / v0.4 keywords
+    Record,
+    Save,
+    Append,
+    Load,
+    Contains,
+    Starts,
+    Ends,
+    Split,
+    Join,
+    Replace,
+    Trim,
+    Reverse,
+    KwNumber,
+    KwText,
+    Remove,
+    Sort,
+    Descending,
+    Sum,
+    Average,
+    Smallest,
+    Largest,
 
     // symbols
     Plus,
@@ -123,8 +146,20 @@ pub fn tokenize(source: &str) -> Result<Vec<Token>, String> {
                     if chars[i] == '\n' {
                         return Err(format!("Unterminated string on line {}", start_line));
                     }
-                    text.push(chars[i]);
-                    i += 1;
+                    if chars[i] == '\\' && i + 1 < chars.len() {
+                        let next = chars[i + 1];
+                        match next {
+                            'n' => { text.push('\n'); i += 2; }
+                            't' => { text.push('\t'); i += 2; }
+                            'r' => { text.push('\r'); i += 2; }
+                            '"' => { text.push('"'); i += 2; }
+                            '\\' => { text.push('\\'); i += 2; }
+                            _ => { text.push(chars[i]); text.push(next); i += 2; }
+                        }
+                    } else {
+                        text.push(chars[i]);
+                        i += 1;
+                    }
                 }
                 if i >= chars.len() {
                     return Err(format!("Unterminated string on line {}", start_line));
@@ -256,6 +291,29 @@ pub fn tokenize(source: &str) -> Result<Vec<Token>, String> {
                     "divided" => TokenKind::Divided,
                     "import" | "include" | "use" => TokenKind::Import,
                     "file" => TokenKind::File,
+
+                    // v0.3 / v0.4 keywords
+                    "record" => TokenKind::Record,
+                    "save" => TokenKind::Save,
+                    "append" => TokenKind::Append,
+                    "load" => TokenKind::Load,
+                    "contains" => TokenKind::Contains,
+                    "starts" => TokenKind::Starts,
+                    "ends" => TokenKind::Ends,
+                    "split" => TokenKind::Split,
+                    "join" => TokenKind::Join,
+                    "replace" => TokenKind::Replace,
+                    "trim" => TokenKind::Trim,
+                    "reverse" => TokenKind::Reverse,
+                    "number" => TokenKind::KwNumber,
+                    "text" => TokenKind::KwText,
+                    "remove" => TokenKind::Remove,
+                    "sort" => TokenKind::Sort,
+                    "descending" => TokenKind::Descending,
+                    "sum" => TokenKind::Sum,
+                    "average" => TokenKind::Average,
+                    "smallest" => TokenKind::Smallest,
+                    "largest" => TokenKind::Largest,
 
                     _ => TokenKind::Ident(word),
                 };

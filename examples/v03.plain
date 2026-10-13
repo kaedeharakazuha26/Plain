@@ -1,0 +1,46 @@
+# Plain v0.3 Features Tour
+
+# 1. Records / Dictionaries
+set person to record with name "Ana", age 20
+say "Name: " + name of person
+say "Age: " + age of person
+set age of person to 21
+say "Updated age: " + age of person
+
+# 2. Text Tools
+set phrase to "  the quick brown fox jumps  "
+say "Trimmed: [" + trim of phrase + "]"
+
+set sentence to trim of phrase
+if sentence contains "quick" and sentence starts with "the" and sentence ends with "jumps"
+    say "Text matching: passed"
+end
+
+set words to split sentence by " "
+say "Words list: " + words
+
+set joined to join words with "-"
+say "Joined with dashes: " + joined
+
+set replaced to replace "fox" with "dog" in sentence
+say "Replaced sentence: " + replaced
+
+# 3. List Aggregations & Helpers
+set scores to [80, 95, 60, 90]
+say "Original scores: " + scores
+say "Sum: " + sum of scores
+say "Average: " + average of scores
+say "Smallest: " + smallest of scores
+say "Largest: " + largest of scores
+
+sort scores
+say "Sorted scores: " + scores
+
+sort scores descending
+say "Sorted descending: " + scores
+
+# 4. File Save & Load
+save "Plain Language v0.3 File Storage" to file "examples/output.txt"
+append "Appended line" to file "examples/output.txt"
+load file_content from file "examples/output.txt"
+say "Loaded file: " + file_content

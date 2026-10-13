@@ -1,0 +1,54 @@
+# Plain v0.4 Compiler Demo — examples/compile-demo.plain
+# Compiles to standalone native Rust without crates!
+# Both interpreted and compiled executions produce byte-identical output.
+
+# 1. Variables and math
+set base to 10
+increase base by 5
+decrease base by 3
+say "Base value: {base}"
+
+# 2. Logic & Comparisons
+if base is greater than 10 and base is between 10 and 15
+    say "Comparison check: passed"
+end
+
+# 3. String tools & {name} interpolation
+set title to "Plain Language"
+if title contains "Lang" and title starts with "Plain" and title ends with "Language"
+    say "Title matches: {title}"
+end
+say "Uppercase title: {uppercase of title}"
+say "Lowercase title: {lowercase of title}"
+
+# 4. Functions & Returns
+define calculate_total with price, tax_rate
+    return price plus (price multiplied by tax_rate)
+end
+
+set total to call calculate_total with 100, 0.12
+say "Total amount: {total}"
+
+# 5. Lists & aggregations
+set numbers to [10, 20, 30]
+add 40 to numbers
+
+say "Numbers count: {length of numbers}"
+say "First number: {first of numbers}"
+say "Last number: {last of numbers}"
+say "Item 2: {item 2 of numbers}"
+say "Sum of numbers: {sum of numbers}"
+say "Average of numbers: {average of numbers}"
+
+# 6. Loops (Repeat & While)
+set counter to 0
+repeat 3 times
+    increase counter by 1
+end
+say "Repeated counter: {counter}"
+
+while counter is above 0
+    decrease counter by 1
+end
+say "Counter after countdown: {counter}"
+say "Compiler demo complete!"

@@ -3,6 +3,10 @@
 **/target/
 **/*.rs.bk
 *.pdb
+compiled.rs
+demo
+*.out
+examples/output.txt
 
 # Node / Frontend
 **/node_modules/
@@ -13,6 +17,7 @@
 # Tauri
 **/src-tauri/target/
 **/src-tauri/gen/schemas/
+**/src-tauri/*.plain
 
 # Logs
 logs/

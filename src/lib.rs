@@ -2,12 +2,14 @@ pub mod ast;
 pub mod interpreter;
 pub mod lexer;
 pub mod parser;
+pub mod transpile;
 
 use interpreter::Interpreter;
 use serde::Serialize;
 use std::collections::HashMap;
 
 pub use interpreter::AskPrompt;
+pub use transpile::transpile_program;
 
 #[derive(Serialize)]
 pub struct InspectResult {
@@ -89,4 +91,11 @@ pub fn run_source(source: &str) -> Result<(), String> {
     let mut parser = parser::Parser::new(tokens);
     let program = parser.parse_program()?;
     Interpreter::new().run(&program)
+}
+
+pub fn compile_source(source: &str) -> Result<String, String> {
+    let tokens = lexer::tokenize(source)?;
+    let mut parser = parser::Parser::new(tokens);
+    let program = parser.parse_program()?;
+    transpile::transpile_program(&program)
 }
