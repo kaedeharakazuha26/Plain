@@ -1,0 +1,32 @@
+# Plain v0.1 — basic English, run with: cargo run -- examples/hello.plain
+
+set name to "jhomar"
+set age to 20
+set price to 120
+set quantity to 3
+
+say "Hello, " + name
+
+if age is above 18
+    say "You are an adult"
+otherwise
+    say "You are a minor"
+end
+
+set total to price * quantity
+say "Total is " + total
+
+set count to 0
+repeat 3 times
+    set count to count + 1
+    say "Hi number " + count
+end
+
+while count is below 5
+    set count to count + 1
+    say "Counting up: " + count
+end
+
+if total is at least 300 and age is above 18
+    say "You get a discount"
+end

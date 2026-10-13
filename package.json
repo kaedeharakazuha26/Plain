@@ -1,0 +1,13 @@
+{
+  "name": "plain-language",
+  "version": "0.1.0",
+  "description": "Plain - English-like programming language in Rust with React IDE",
+  "scripts": {
+    "ide": "npm --prefix ide run dev",
+    "ide:build": "npm --prefix ide run build",
+    "ide:preview": "npm --prefix ide run preview",
+    "tauri": "npm --prefix ide run tauri",
+    "tauri:dev": "npm --prefix ide run tauri dev",
+    "tauri:build": "npm --prefix ide run tauri build"
+  }
+}
