@@ -279,6 +279,16 @@ impl Parser {
                 Ok(Stmt::Decrease { name, by })
             }
 
+            // import "other.plain" / import file "other.plain"
+            TokenKind::Import => {
+                self.next();
+                if *self.peek() == TokenKind::File {
+                    self.next();
+                }
+                let path = self.parse_expr()?;
+                Ok(Stmt::Import { path })
+            }
+
             other => Err(format!(
                 "Line {}: unexpected statement starting with {:?}",
                 self.line(),

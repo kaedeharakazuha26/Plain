@@ -61,6 +61,8 @@ pub enum TokenKind {
     Item,
     Multiplied,
     Divided,
+    Import,
+    File,
 
     // symbols
     Plus,
@@ -252,6 +254,8 @@ pub fn tokenize(source: &str) -> Result<Vec<Token>, String> {
                     "minus" => TokenKind::Minus,
                     "multiplied" => TokenKind::Multiplied,
                     "divided" => TokenKind::Divided,
+                    "import" | "include" | "use" => TokenKind::Import,
+                    "file" => TokenKind::File,
 
                     _ => TokenKind::Ident(word),
                 };

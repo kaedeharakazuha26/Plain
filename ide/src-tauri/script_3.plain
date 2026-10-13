@@ -1,5 +1,0 @@
-# script_3.plain
-# Write Plain English code here:
-
-ask user_name with "What is your name?"
-say "Hello, " + user_name

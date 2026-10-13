@@ -56,6 +56,20 @@ call greet with "jhomar"
 `
     },
     {
+      id: 'imports',
+      tag: 'MODULES & IMPORTS',
+      title: '4. Multi-File Imports & Integration',
+      desc: 'Import another .plain file to call its functions and access its shared variables.',
+      code: `import "examples/math_utils.plain"
+
+set doubled to call double_number with 21
+say "Doubled: " + doubled`,
+      insert: `import "examples/math_utils.plain"
+set doubled to call double_number with 21
+say "Result: " + doubled
+`
+    },
+    {
       id: 'lists',
       tag: 'LISTS',
       title: '4. Lists & For Each Iteration',

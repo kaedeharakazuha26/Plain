@@ -72,11 +72,6 @@ fn exec_terminal(
   if let Some(ref sf) = sync_file {
     let p = ws.join(&sf.name);
     let _ = std::fs::write(&p, &sf.content);
-    if let Ok(curr) = std::env::current_dir() {
-      if curr != ws {
-        let _ = std::fs::write(curr.join(&sf.name), &sf.content);
-      }
-    }
   }
 
   let mut cmd_to_run = command.clone();

@@ -1,0 +1,12 @@
+# examples/math_utils.plain
+# Reusable helper functions and constants
+
+set pi to 3.14159
+
+define double_number with n
+    return n multiplied by 2
+end
+
+define greet_user with user_name
+    return "Hello from imported math_utils, " + uppercase of user_name + "!"
+end

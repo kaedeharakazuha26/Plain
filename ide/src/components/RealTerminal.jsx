@@ -27,8 +27,105 @@ export default function RealTerminal({
   const currentLineRef = useRef('');
   const historyRef = useRef([]);
   const historyIndexRef = useRef(-1);
+  const waitingForInputRef = useRef(null);
 
   const PROMPT = '\x1b[1;36mplain@ide\x1b[0m:\x1b[1;32m~/workspace\x1b[0m$ ';
+
+  const syncFileToDisk = async (name, content) => {
+    if (typeof window !== 'undefined' && window.__TAURI_INTERNALS__) {
+      try {
+        const { invoke } = await import('@tauri-apps/api/core');
+        await invoke('exec_terminal', {
+          command: 'true',
+          args: [],
+          cwd: null,
+          stdinData: null,
+          syncFile: { name, content }
+        });
+      } catch {}
+    } else {
+      try {
+        await fetch('/api/terminal/exec', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            command: 'true',
+            args: [],
+            syncFile: { name, content }
+          })
+        });
+      } catch {}
+    }
+  };
+
+  const syncAllFilesToDisk = async () => {
+    for (const f of files) {
+      const code = (f.id === activeFile?.id && activeCode !== undefined) ? activeCode : f.code;
+      await syncFileToDisk(f.name, code);
+    }
+  };
+
+  // Run Plain files interactively supporting 'ask' prompts inside terminal
+  const runPlainInteractive = async (targetFile, targetCode, inputs = [], printedLinesCount = 0, term) => {
+    isRunningRef.current = true;
+
+    // Sync all files so imports across files succeed
+    await syncAllFilesToDisk();
+
+    let res = null;
+    if (typeof window !== 'undefined' && window.__TAURI_INTERNALS__) {
+      try {
+        const { invoke } = await import('@tauri-apps/api/core');
+        res = await invoke('run_plain', { code: targetCode, inputs });
+      } catch (err) {
+        console.warn('Tauri run_plain failed, falling back:', err);
+      }
+    }
+
+    if (!res) {
+      try {
+        const response = await fetch('/api/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: targetCode, inputs })
+        });
+        res = await response.json();
+      } catch (err) {
+        res = { success: false, output: [], error: err.message };
+      }
+    }
+
+    const outputLines = res.output || [];
+    for (let i = printedLinesCount; i < outputLines.length; i++) {
+      term.writeln(outputLines[i]);
+    }
+    const newPrintedCount = outputLines.length;
+
+    // Check if waiting for input from 'ask' prompt
+    if (res.waiting_for_input) {
+      const promptText = res.waiting_for_input.prompt;
+      term.write(`\x1b[1;33m${promptText}\x1b[0m `);
+      waitingForInputRef.current = {
+        targetFile,
+        targetCode,
+        inputs,
+        printedLinesCount: newPrintedCount,
+        prompt: promptText
+      };
+      currentLineRef.current = '';
+      isRunningRef.current = false;
+      return;
+    }
+
+    if (res.error) {
+      term.writeln(`\x1b[31m${res.error}\x1b[0m`);
+    }
+
+    term.writeln(`\r\n\x1b[90m[Process finished with exit code ${res.success ? 0 : 1}]\x1b[0m\r\n`);
+    term.write(PROMPT);
+    waitingForInputRef.current = null;
+    isRunningRef.current = false;
+  };
 
   // Execute command on backend (Tauri or HTTP API)
   const executeShellCommand = async (fullCommand, stdin = null, customFile = null) => {
@@ -153,16 +250,43 @@ export default function RealTerminal({
         return;
       }
 
+      // Ctrl+C (cancel input / command)
+      if (data === '\u0003') {
+        if (waitingForInputRef.current) {
+          waitingForInputRef.current = null;
+          currentLineRef.current = '';
+          term.writeln('^C');
+          term.write(PROMPT);
+          isRunningRef.current = false;
+          return;
+        }
+      }
+
       // Enter key
       if (data === '\r' || data === '\n') {
         term.writeln('');
-        const line = currentLineRef.current.trim();
+        const line = currentLineRef.current;
         currentLineRef.current = '';
         historyIndexRef.current = -1;
 
-        if (line) {
-          historyRef.current.push(line);
-          await handleCommand(line, term);
+        if (waitingForInputRef.current) {
+          const state = waitingForInputRef.current;
+          waitingForInputRef.current = null;
+          isRunningRef.current = true;
+          await runPlainInteractive(
+            state.targetFile,
+            state.targetCode,
+            [...state.inputs, line],
+            state.printedLinesCount,
+            term
+          );
+          return;
+        }
+
+        const trimmed = line.trim();
+        if (trimmed) {
+          historyRef.current.push(trimmed);
+          await handleCommand(trimmed, term);
         } else {
           term.write(PROMPT);
         }
@@ -178,8 +302,8 @@ export default function RealTerminal({
         return;
       }
 
-      // Arrow Up (History back)
-      if (data === '\x1b[A') {
+      // Arrow Up (History back) - only when not waiting for interactive input
+      if (data === '\x1b[A' && !waitingForInputRef.current) {
         if (historyRef.current.length > 0) {
           const nextIdx = historyIndexRef.current === -1
             ? historyRef.current.length - 1
@@ -198,8 +322,8 @@ export default function RealTerminal({
         return;
       }
 
-      // Arrow Down (History forward)
-      if (data === '\x1b[B') {
+      // Arrow Down (History forward) - only when not waiting for interactive input
+      if (data === '\x1b[B' && !waitingForInputRef.current) {
         if (historyRef.current.length > 0 && historyIndexRef.current !== -1) {
           const nextIdx = historyIndexRef.current + 1;
           while (currentLineRef.current.length > 0) {
@@ -319,25 +443,26 @@ export default function RealTerminal({
     if (cleanCommand.endsWith('.plain')) {
       const targetFile = files.find(f => f.name === cleanCommand || f.id === cleanCommand) || activeFile;
       const fileName = targetFile ? targetFile.name : cleanCommand;
+      const targetCode = (targetFile && targetFile.id === activeFile?.id && activeCode !== undefined)
+        ? activeCode
+        : (targetFile ? targetFile.code : '');
+
       term.writeln(`\x1b[36mRunning ${fileName} with Plain interpreter...\x1b[0m`);
-
-      const res = await executeShellCommand(`plain ${fileName}`, null, targetFile);
-      if (res.stdout) {
-        const formatted = res.stdout.replace(/\r?\n/g, '\r\n');
-        term.write(formatted);
+      if (targetFile) {
+        await runPlainInteractive(targetFile, targetCode, [], 0, term);
+      } else {
+        const res = await executeShellCommand(`plain ${fileName}`);
+        if (res.stdout) term.write(res.stdout.replace(/\r?\n/g, '\r\n'));
+        if (res.stderr) term.writeln(`\x1b[31m${res.stderr.replace(/\r?\n/g, '\r\n')}\x1b[0m`);
+        term.writeln(`\r\n\x1b[90m[Process finished with exit code ${res.code}]\x1b[0m\r\n`);
+        term.write(PROMPT);
+        isRunningRef.current = false;
       }
-      if (res.stderr) {
-        term.writeln(`\x1b[31m${res.stderr.replace(/\r?\n/g, '\r\n')}\x1b[0m`);
-      }
-
-      term.writeln(`\r\n\x1b[90m[Process finished with exit code ${res.code}]\x1b[0m\r\n`);
-      term.write(PROMPT);
-      isRunningRef.current = false;
       return;
     }
 
     if (cmd === 'run') {
-      const targetName = args[0] || (activeFile ? activeFile.name : null);
+      const targetName = args[0] ? args[0].replace(/^\.\//, '') : (activeFile ? activeFile.name : null);
       if (!targetName) {
         term.writeln('\x1b[31mNo active file to run.\x1b[0m');
         term.write(PROMPT);
@@ -346,30 +471,32 @@ export default function RealTerminal({
       }
 
       const targetFile = files.find(f => f.name === targetName || f.id === targetName) || activeFile;
-      term.writeln(`\x1b[36mRunning ${targetName} with Plain interpreter...\x1b[0m`);
+      const targetCode = (targetFile.id === activeFile?.id && activeCode !== undefined)
+        ? activeCode
+        : targetFile.code;
 
-      // Run via executeShellCommand with target file synced
-      const res = await executeShellCommand(`plain ${targetName}`, null, targetFile);
-      if (res.stdout) {
-        // Output lines with proper carriage returns
-        const formatted = res.stdout.replace(/\r?\n/g, '\r\n');
-        term.write(formatted);
-      }
-      if (res.stderr) {
-        term.writeln(`\x1b[31m${res.stderr.replace(/\r?\n/g, '\r\n')}\x1b[0m`);
-      }
-
-      term.writeln(`\r\n\x1b[90m[Process finished with exit code ${res.code}]\x1b[0m\r\n`);
-      term.write(PROMPT);
-      isRunningRef.current = false;
+      term.writeln(`\x1b[36mRunning ${targetFile.name} with Plain interpreter...\x1b[0m`);
+      await runPlainInteractive(targetFile, targetCode, [], 0, term);
       return;
     }
 
     if (cmd === 'plain') {
-      const targetName = args[0];
-      const targetFile = files.find(f => f.name === targetName || f.id === targetName) || activeFile;
+      const targetName = args[0] ? args[0].replace(/^\.\//, '') : null;
+      if (targetName && targetName.endsWith('.plain')) {
+        const targetFile = files.find(f => f.name === targetName || f.id === targetName) || activeFile;
+        const targetCode = (targetFile && targetFile.id === activeFile?.id && activeCode !== undefined)
+          ? activeCode
+          : (targetFile ? targetFile.code : '');
+
+        term.writeln(`\x1b[36mRunning ${targetName} with Plain interpreter...\x1b[0m`);
+        if (targetFile) {
+          await runPlainInteractive(targetFile, targetCode, [], 0, term);
+          return;
+        }
+      }
+
       try {
-        const res = await executeShellCommand(cmdLine, null, targetFile);
+        const res = await executeShellCommand(cmdLine);
         if (res.stdout) {
           term.write(res.stdout.replace(/\r?\n/g, '\r\n'));
         }

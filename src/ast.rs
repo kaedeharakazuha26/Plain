@@ -121,4 +121,5 @@ pub enum Stmt {
     ForEach { item_name: String, list: Expr, body: Vec<Stmt> },
     Increase { name: String, by: Expr },
     Decrease { name: String, by: Expr },
+    Import { path: Expr },
 }

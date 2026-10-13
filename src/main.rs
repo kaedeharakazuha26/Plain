@@ -221,4 +221,33 @@ end
 "#;
         assert!(run_source(src).is_ok());
     }
+
+    #[test]
+    fn import_other_plain_file_works() {
+        let helper_path = std::env::temp_dir().join("plain_test_helper.plain");
+        let helper_src = r#"
+define multiply_nums with x, y
+    return x multiplied by y
+end
+set helper_secret to 42
+"#;
+        std::fs::write(&helper_path, helper_src).unwrap();
+
+        let main_src = format!(
+            r#"
+import "{}"
+set res to call multiply_nums with 6, 7
+if res is 42 and helper_secret is 42
+    say "import ok"
+otherwise
+    say 1 / 0
+end
+"#,
+            helper_path.to_string_lossy()
+        );
+
+        let result = run_source(&main_src);
+        let _ = std::fs::remove_file(helper_path);
+        assert!(result.is_ok());
+    }
 }

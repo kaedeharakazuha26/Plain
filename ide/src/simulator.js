@@ -128,6 +128,10 @@ export function tokenizePlain(source) {
         case 'or': tokens.push({ kind: 'Or', line }); break;
         case 'ask': tokens.push({ kind: 'Ask', line }); break;
         case 'with': tokens.push({ kind: 'With', line }); break;
+        case 'import':
+        case 'include':
+        case 'use': tokens.push({ kind: 'Import', line }); break;
+        case 'file': tokens.push({ kind: 'File', line }); break;
         case 'true': tokens.push({ kind: 'True', line }); break;
         case 'false': tokens.push({ kind: 'False', line }); break;
         default: tokens.push({ kind: { Ident: word }, line }); break;
@@ -410,6 +414,13 @@ export function runSimulator(source, inputs = []) {
       return { While: { condition, body } };
     }
 
+    if (k === 'Import') {
+      advance();
+      if (peek().kind === 'File') advance();
+      const path = parseExpression();
+      return { Import: { path } };
+    }
+
     throw new Error(`Line ${tok.line}: Unexpected statement starting with ${JSON.stringify(k)}`);
   }
 
@@ -577,6 +588,10 @@ export function runSimulator(source, inputs = []) {
           throw new Error('while loop stopped: over 1,000,000 iterations (infinite loop?)');
         }
       }
+      return;
+    }
+    if ('Import' in stmt) {
+      evalExpr(stmt.Import.path);
       return;
     }
   }

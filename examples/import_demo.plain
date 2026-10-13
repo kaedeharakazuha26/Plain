@@ -1,0 +1,12 @@
+# examples/import_demo.plain
+# Demonstrates importing another Plain file and calling functions
+
+import "examples/math_utils.plain"
+
+say "Imported pi value: " + pi
+
+set doubled to call double_number with 21
+say "21 doubled is: " + doubled
+
+set msg to call greet_user with "jhomar"
+say msg

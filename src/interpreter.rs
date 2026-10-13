@@ -30,6 +30,7 @@ pub struct Interpreter {
     pub inputs: Vec<String>,
     pub input_index: usize,
     pub waiting_for_input: Option<AskPrompt>,
+    pub imported_files: std::collections::HashSet<std::path::PathBuf>,
 }
 
 impl Default for Interpreter {
@@ -50,6 +51,7 @@ impl Interpreter {
             inputs: Vec::new(),
             input_index: 0,
             waiting_for_input: None,
+            imported_files: std::collections::HashSet::new(),
         }
     }
 
@@ -64,6 +66,7 @@ impl Interpreter {
             inputs: Vec::new(),
             input_index: 0,
             waiting_for_input: None,
+            imported_files: std::collections::HashSet::new(),
         }
     }
 
@@ -78,6 +81,7 @@ impl Interpreter {
             inputs,
             input_index: 0,
             waiting_for_input: None,
+            imported_files: std::collections::HashSet::new(),
         }
     }
 
@@ -338,6 +342,52 @@ impl Interpreter {
                     Ok(())
                 })?;
                 Ok(Flow::None)
+            }
+
+            // import "other.plain" / import file "other.plain"
+            Stmt::Import { path } => {
+                let path_val = self.eval(path)?;
+                let file_str = path_val.to_string();
+                let mut filename = file_str.trim().to_string();
+                if !filename.ends_with(".plain") {
+                    filename.push_str(".plain");
+                }
+
+                let path_buf = std::path::PathBuf::from(&filename);
+                let resolved_path = if path_buf.exists() {
+                    path_buf
+                } else if let Ok(curr) = std::env::current_dir() {
+                    let p = curr.join(&filename);
+                    if p.exists() {
+                        p
+                    } else {
+                        let p2 = curr.join("examples").join(&filename);
+                        if p2.exists() {
+                            p2
+                        } else {
+                            return Err(format!("Cannot import '{}': file not found", filename));
+                        }
+                    }
+                } else {
+                    return Err(format!("Cannot import '{}': file not found", filename));
+                };
+
+                let canonical = resolved_path.canonicalize().unwrap_or(resolved_path.clone());
+                if self.imported_files.contains(&canonical) {
+                    return Ok(Flow::None);
+                }
+                self.imported_files.insert(canonical);
+
+                let source = std::fs::read_to_string(&resolved_path)
+                    .map_err(|e| format!("Failed to read imported file '{}': {}", filename, e))?;
+
+                let tokens = crate::lexer::tokenize(&source)?;
+                let mut parser = crate::parser::Parser::new(tokens);
+                let program = parser.parse_program()?;
+
+                match self.exec_block(&program)? {
+                    Flow::None | Flow::Return(_) => Ok(Flow::None),
+                }
             }
         }
     }

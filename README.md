@@ -129,25 +129,38 @@ interpreter.rs  walks the tree and executes it:
 
 ---
 
-## Language Reference (v0.2)
+## Language Reference & Syntax
 
-### 1. Variables & Values
+### 1. Basics & Variables
+- `set <name> to <expr>` / `change <name> to <expr>`
+- `say <expr>` — prints value to console
+- `# comment` — comment to the end of the line
+- `ask <name> with "<prompt>"` — interactive input in terminal; typed numbers are stored as numbers
+
 ```plain
 set name to "jhomar"
-change score to 100
-increase lives by 1
-decrease health by 10
-```
-
-### 2. Interactive User Input
-```plain
-ask user_name with "What is your name?"
-say "Hello, " + user_name
-
 ask age with "How old are you?"
-say "Next year you will be: " + (age plus 1)
+say "Hello, " + uppercase of name
 ```
-- Automatically parses numeric responses as numbers, and text responses as text strings.
+
+### 2. Multi-File Modules & Imports (New!)
+Plain supports modular programming across multiple files. You can import any other `.plain` file to reuse its functions, constants, and variables:
+
+```plain
+# Import another file by path (with or without .plain)
+import "examples/math_utils.plain"
+# or: include "helpers.plain" / import file "utils.plain"
+
+# Call functions defined in the imported file
+set doubled to call double_number with 21
+say "Result: " + doubled
+
+# Access top-level variables from the imported file
+say "Imported pi: " + pi
+```
+- Functions defined with `define` in the imported file become immediately callable.
+- Circular imports are automatically prevented.
+- File paths are resolved relative to the workspace or working directory.
 
 ### 3. Functions & Isolated Scope
 ```plain
@@ -158,10 +171,22 @@ end
 set total to call calculate_total with 100, 0.15
 say "Total amount: $" + total
 ```
-- Parameters are comma-separated after `with`.
+- Parameters are separated by commas after `with`.
 - Functions maintain local scope (outer variables are accessible; local assignments do not leak).
+- Use `return <expr>` to return values.
 
-### 4. Lists & For Each Iteration
+### 4. Interactive User Input (`ask`)
+```plain
+ask user_name with "What is your name?"
+say "Welcome, " + user_name
+
+ask age with "How old are you?"
+say "Next year you will be: " + (age plus 1)
+```
+- When executed in the Real Terminal or CLI, execution pauses at the prompt, displays the question, and waits for your answer.
+- Typed numbers are automatically stored as numbers, and text as text.
+
+### 5. Lists & Iteration
 ```plain
 set scores to [80, 90, 75]
 add 100 to scores
@@ -170,43 +195,20 @@ for each score in scores
     say "Score: " + score
 end
 ```
+- Helpers: `length of`, `first of`, `last of`, `item 2 of` (1-indexed).
 
-### 5. Built-in Helpers (1-Indexed)
+### 6. Control Flow
 ```plain
-say length of scores          # Length of list or text
-say first of scores           # First element or letter
-say last of scores            # Last element or letter
-say item 2 of scores          # 1-indexed element access
-say uppercase of "hello"      # "HELLO"
-say lowercase of "WORLD"      # "world"
-```
-
-### 6. Chained Conditionals
-```plain
+# Conditionals
 if age is between 13 and 19
-    say "Teenager"
+    say "Status: teenager"
 otherwise if age is at least 20
-    say "Adult"
+    say "Status: adult"
 otherwise
-    say "Kid"
+    say "Status: kid"
 end
-```
 
-### 7. Natural English Comparisons & Math
-```plain
-is between 10 and 20          # Range check
-is above / is greater than    # >
-is below / is less than       # <
-is at least                   # >=
-is at most                    # <=
-is equal to / is same as      # ==
-is not equal to               # !=
-plus, minus, multiplied by, divided by
-and, or, not
-```
-
-### 8. Loops
-```plain
+# Loops
 repeat 3 times
     say "Echo!"
 end
@@ -216,17 +218,25 @@ while count is below 5
 end
 ```
 
+### 7. Natural English Comparisons & Math
+- Range check: `is between 10 and 20`
+- Comparisons: `is above`, `is below`, `is at least`, `is at most`, `is equal to`, `is not equal to`, `is different from`, `is same as`
+- Symbols: `> < >= <= == !=`
+- Arithmetic: `+ - * / plus minus multiplied by divided by`
+- Logic: `and`, `or`, `not`
+
 ---
 
 ## Running Tests
 
-All interpreter features are covered by automated unit tests:
+All interpreter features (including multi-file imports, interactive inputs, and functions) are covered by automated unit tests:
 
 ```bash
 cargo test
 ```
 
 Tests include:
+- Multi-file importing and cross-file function calling
 - Pipeline lexer/parser/interpreter execution
 - Functions, parameter passing, and return values
 - Lists and `for each` loops
