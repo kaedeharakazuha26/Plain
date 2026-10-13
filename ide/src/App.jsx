@@ -36,12 +36,20 @@ export default function App() {
 
   const [activeFileId, setActiveFileId] = useState(INITIAL_FILES[0].id);
 
-  // Layout UI Toggles
+  // Layout UI Toggles & Resizable Dimensions
   const [activeActivityView, setActiveActivityView] = useState('explorer'); // 'explorer' | 'guide' | null
   const [bottomDockOpen, setBottomDockOpen] = useState(true);
   const [rightSidebarOpen, setRightSidebarOpen] = useState(true);
   const [dockTab, setDockTab] = useState('terminal'); // 'terminal' | 'problems' | 'ast' | 'tokens' | 'variables'
-  const [dockHeight, setDockHeight] = useState(240);
+
+  // Resizable Panes State
+  const [sidebarWidth, setSidebarWidth] = useState(250);
+  const [rightSidebarWidth, setRightSidebarWidth] = useState(330);
+  const [dockHeight, setDockHeight] = useState(250);
+
+  const isResizingLeft = useRef(false);
+  const isResizingRight = useRef(false);
+  const isResizingBottom = useRef(false);
 
   // Execution & Engine State
   const [isRunning, setIsRunning] = useState(false);
@@ -49,6 +57,7 @@ export default function App() {
   const [engineMode, setEngineMode] = useState('rust'); // 'rust' | 'sim'
   const [rustAvailable, setRustAvailable] = useState(true);
   const [cursorPos, setCursorPos] = useState({ line: 1, col: 1 });
+  const [sessionInputs, setSessionInputs] = useState([]);
 
   const [result, setResult] = useState({
     success: true,
@@ -57,9 +66,67 @@ export default function App() {
     ast: [],
     variables: {},
     error: null,
+    waiting_for_input: null,
     executionTimeMs: null,
     engine: 'rust-native'
   });
+
+  // Global mousemove and mouseup listeners for resizing sidebars and dock
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (isResizingLeft.current) {
+        // Left sidebar starts after 48px activity bar
+        const newWidth = Math.max(160, Math.min(520, e.clientX - 48));
+        setSidebarWidth(newWidth);
+      } else if (isResizingRight.current) {
+        // Right sidebar width is distance from right window edge
+        const newWidth = Math.max(220, Math.min(650, window.innerWidth - e.clientX));
+        setRightSidebarWidth(newWidth);
+      } else if (isResizingBottom.current) {
+        // Bottom dock height is distance from bottom window edge minus status bar (24px)
+        const newHeight = Math.max(110, Math.min(600, window.innerHeight - e.clientY - 24));
+        setDockHeight(newHeight);
+      }
+    };
+
+    const handleMouseUp = () => {
+      if (isResizingLeft.current || isResizingRight.current || isResizingBottom.current) {
+        isResizingLeft.current = false;
+        isResizingRight.current = false;
+        isResizingBottom.current = false;
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      }
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, []);
+
+  const startResizeLeft = (e) => {
+    e.preventDefault();
+    isResizingLeft.current = true;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  };
+
+  const startResizeRight = (e) => {
+    e.preventDefault();
+    isResizingRight.current = true;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  };
+
+  const startResizeBottom = (e) => {
+    e.preventDefault();
+    isResizingBottom.current = true;
+    document.body.style.cursor = 'row-resize';
+    document.body.style.userSelect = 'none';
+  };
 
   // Save files to localStorage
   useEffect(() => {
@@ -100,7 +167,7 @@ export default function App() {
   const errorLine = extractErrorLine(result.error);
 
   // Execute Code via Tauri, Rust HTTP API, or Simulator
-  const executeCode = useCallback(async (codeToRun) => {
+  const executeCode = useCallback(async (codeToRun, inputs = sessionInputs) => {
     setIsRunning(true);
     const startTime = performance.now();
 
@@ -108,7 +175,7 @@ export default function App() {
     if (typeof window !== 'undefined' && window.__TAURI_INTERNALS__) {
       try {
         const { invoke } = await import('@tauri-apps/api/core');
-        const data = await invoke('run_plain', { code: codeToRun });
+        const data = await invoke('run_plain', { code: codeToRun, inputs });
         setResult({
           success: data.success,
           output: data.output || [],
@@ -116,6 +183,7 @@ export default function App() {
           ast: data.ast || [],
           variables: data.variables || {},
           error: data.error || null,
+          waiting_for_input: data.waiting_for_input || null,
           executionTimeMs: data.executionTimeMs || Math.round((performance.now() - startTime) * 100) / 100,
           engine: 'tauri-desktop'
         });
@@ -132,7 +200,7 @@ export default function App() {
         const response = await fetch('/api/run', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ code: codeToRun })
+          body: JSON.stringify({ code: codeToRun, inputs })
         });
 
         const data = await response.json();
@@ -143,33 +211,54 @@ export default function App() {
           ast: data.ast || [],
           variables: data.variables || {},
           error: data.error || null,
+          waiting_for_input: data.waiting_for_input || null,
           executionTimeMs: data.executionTimeMs || Math.round((performance.now() - startTime) * 100) / 100,
           engine: 'rust-native'
         });
 
-        // If error, auto open dock
-        if (!data.success && data.error) {
+        // If error or waiting for input, ensure dock is open
+        if ((!data.success && data.error) || data.waiting_for_input) {
           setBottomDockOpen(true);
+          setDockTab('terminal');
         }
       } catch (err) {
         console.warn('Rust backend error, falling back to simulator:', err);
-        const simResult = runSimulator(codeToRun);
+        const simResult = runSimulator(codeToRun, inputs);
         setResult({ ...simResult, engine: 'js-simulator' });
       }
     } else {
-      const simResult = runSimulator(codeToRun);
+      const simResult = runSimulator(codeToRun, inputs);
       setResult(simResult);
     }
 
     setIsRunning(false);
-  }, [engineMode, rustAvailable]);
+  }, [engineMode, rustAvailable, sessionInputs]);
 
-  // Run on mount
+  // Run initial active code on mount
   useEffect(() => {
     if (activeCode) {
-      executeCode(activeCode);
+      executeCode(activeCode, []);
     }
   }, []);
+
+  // Run fresh code (clears previous session inputs)
+  const handleRunFresh = () => {
+    setSessionInputs([]);
+    executeCode(activeCode, []);
+  };
+
+  // Handle Terminal Interactive Input
+  const handleTerminalInput = (inputValue) => {
+    const nextInputs = [...sessionInputs, inputValue];
+    setSessionInputs(nextInputs);
+    executeCode(activeCode, nextInputs);
+  };
+
+  // Restart terminal session
+  const handleResetSession = () => {
+    setSessionInputs([]);
+    executeCode(activeCode, []);
+  };
 
   // Handle Code Changes in Active File
   const autoRunTimer = useRef(null);
@@ -179,7 +268,8 @@ export default function App() {
     if (autoRun) {
       if (autoRunTimer.current) clearTimeout(autoRunTimer.current);
       autoRunTimer.current = setTimeout(() => {
-        executeCode(newCode);
+        setSessionInputs([]);
+        executeCode(newCode, []);
       }, 500);
     }
   };
@@ -192,7 +282,8 @@ export default function App() {
     }
     const targetFile = files.find(f => f.id === id);
     if (targetFile) {
-      executeCode(targetFile.code);
+      setSessionInputs([]);
+      executeCode(targetFile.code, []);
     }
   };
 
@@ -205,17 +296,20 @@ export default function App() {
   };
 
   const handleCreateFile = (filename) => {
-    const id = filename.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+    let finalName = filename.trim();
+    if (!finalName.endsWith('.plain')) finalName += '.plain';
+    const id = finalName.toLowerCase().replace(/[^a-z0-9_]/g, '_');
     const newFile = {
       id,
-      name: filename,
-      code: `# ${filename}\n# Write Plain English language code here:\n\nset message to "Hello from ${filename}"\nsay message\n`,
+      name: finalName,
+      code: `# ${finalName}\n# Write Plain English code here:\n\nask user_name with "What is your name?"\nsay "Hello, " + user_name\n`,
       category: 'workspace'
     };
     setFiles(prev => [...prev, newFile]);
     setOpenFileIds(prev => [...prev, id]);
     setActiveFileId(id);
-    executeCode(newFile.code);
+    setSessionInputs([]);
+    executeCode(newFile.code, []);
   };
 
   const handleDeleteFile = (id) => {
@@ -231,8 +325,10 @@ export default function App() {
     setResult(prev => ({
       ...prev,
       output: [],
-      error: null
+      error: null,
+      waiting_for_input: null
     }));
+    setSessionInputs([]);
   };
 
   return (
@@ -241,7 +337,7 @@ export default function App() {
       <VsTitleBar
         activeFile={activeFile}
         isRunning={isRunning}
-        onRun={() => executeCode(activeCode)}
+        onRun={handleRunFresh}
         autoRun={autoRun}
         setAutoRun={setAutoRun}
         engineMode={engineMode}
@@ -263,15 +359,24 @@ export default function App() {
 
         {/* Primary Sidebar (Explorer) */}
         {activeActivityView === 'explorer' && (
-          <VsSidebar
-            files={files}
-            openFileIds={openFileIds}
-            activeFileId={activeFileId}
-            onSelectFile={handleSelectFile}
-            onCloseFile={handleCloseFile}
-            onCreateFile={handleCreateFile}
-            onDeleteFile={handleDeleteFile}
-          />
+          <>
+            <VsSidebar
+              files={files}
+              openFileIds={openFileIds}
+              activeFileId={activeFileId}
+              onSelectFile={handleSelectFile}
+              onCloseFile={handleCloseFile}
+              onCreateFile={handleCreateFile}
+              onDeleteFile={handleDeleteFile}
+              width={sidebarWidth}
+            />
+            {/* Resizer Handle: Left Sidebar */}
+            <div
+              className="vs-resizer-col left"
+              onMouseDown={startResizeLeft}
+              title="Drag to resize Explorer"
+            />
+          </>
         )}
 
         {/* Center Column: Editor Tabs + Editor + Bottom Terminal Dock */}
@@ -289,7 +394,7 @@ export default function App() {
             <Editor
               code={activeCode}
               onChange={handleCodeChange}
-              onRun={() => executeCode(activeCode)}
+              onRun={handleRunFresh}
               errorLine={errorLine}
               cursorPos={cursorPos}
               setCursorPos={setCursorPos}
@@ -298,24 +403,43 @@ export default function App() {
 
           {/* Bottom Dock (Terminal, AST, Tokens, Variables, Problems) */}
           {bottomDockOpen && (
-            <VsBottomDock
-              activeTab={dockTab}
-              setActiveTab={setDockTab}
-              result={result}
-              onClear={handleClearConsole}
-              onClose={() => setBottomDockOpen(false)}
-              dockHeight={dockHeight}
-              setDockHeight={setDockHeight}
-            />
+            <>
+              {/* Resizer Handle: Bottom Dock */}
+              <div
+                className="vs-resizer-row"
+                onMouseDown={startResizeBottom}
+                title="Drag to resize Terminal Dock"
+              />
+              <VsBottomDock
+                activeTab={dockTab}
+                setActiveTab={setDockTab}
+                result={result}
+                onClear={handleClearConsole}
+                onClose={() => setBottomDockOpen(false)}
+                dockHeight={dockHeight}
+                setDockHeight={setDockHeight}
+                onInputSubmit={handleTerminalInput}
+                onResetSession={handleResetSession}
+              />
+            </>
           )}
         </section>
 
-        {/* Right Sidebar (Guides, Examples & Sentence Assistant) */}
+        {/* Right Sidebar (Sentence Builder & Language Reference) */}
         {rightSidebarOpen && (
-          <VsRightSidebar
-            onInsertSnippet={handleInsertSnippet}
-            onClose={() => setRightSidebarOpen(false)}
-          />
+          <>
+            {/* Resizer Handle: Right Sidebar */}
+            <div
+              className="vs-resizer-col right"
+              onMouseDown={startResizeRight}
+              title="Drag to resize Assistant"
+            />
+            <VsRightSidebar
+              onInsertSnippet={handleInsertSnippet}
+              onClose={() => setRightSidebarOpen(false)}
+              width={rightSidebarWidth}
+            />
+          </>
         )}
       </main>
 
