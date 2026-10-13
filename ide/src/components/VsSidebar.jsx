@@ -8,7 +8,9 @@ import {
   ChevronRight,
   ChevronDown,
   X,
-  Trash2
+  Trash2,
+  FolderPlus,
+  Upload
 } from 'lucide-react';
 
 export default function VsSidebar({
@@ -19,10 +21,13 @@ export default function VsSidebar({
   onCloseFile,
   onCreateFile,
   onDeleteFile,
+  onOpenFile,
+  onOpenFolder,
+  folderName = 'workspace',
   width
 }) {
-  const [examplesOpen, setExamplesOpen] = useState(true);
   const [openEditorsOpen, setOpenEditorsOpen] = useState(true);
+  const [workspaceOpen, setWorkspaceOpen] = useState(true);
   const [isCreatingFile, setIsCreatingFile] = useState(false);
   const [newFileName, setNewFileName] = useState('');
 
@@ -40,13 +45,11 @@ export default function VsSidebar({
   };
 
   const openFiles = files.filter(f => openFileIds.includes(f.id));
-  const exampleFiles = files.filter(f => f.category === 'examples');
-  const userFiles = files.filter(f => f.category !== 'examples');
 
   return (
     <aside className="vs-sidebar" style={width ? { width: `${width}px` } : undefined}>
       <div className="sidebar-header">
-        <span>Explorer: Plain-Lang</span>
+        <span>Explorer: {folderName}</span>
         <div className="sidebar-actions">
           <button
             className="sidebar-action-btn"
@@ -57,10 +60,10 @@ export default function VsSidebar({
           </button>
           <button
             className="sidebar-action-btn"
-            onClick={() => {}}
-            title="Refresh Explorer"
+            onClick={onOpenFolder}
+            title="Open Folder..."
           >
-            <RefreshCw size={13} />
+            <FolderPlus size={14} />
           </button>
         </div>
       </div>
@@ -103,89 +106,42 @@ export default function VsSidebar({
         )}
       </div>
 
-      {/* WORKSPACE FILES SECTION */}
+      {/* WORKSPACE FILES SECTION (Clean, no hardcoded examples) */}
       <div className="sidebar-section" style={{ marginTop: '8px' }}>
         <div
           className="sidebar-section-title"
-          onClick={() => setExamplesOpen(!examplesOpen)}
+          onClick={() => setWorkspaceOpen(!workspaceOpen)}
         >
-          {examplesOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-          <span>PLAIN-LANG WORKSPACE</span>
+          {workspaceOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+          <span style={{ textTransform: 'uppercase' }}>{folderName}</span>
+          <span className="file-item-badge" style={{ marginLeft: 'auto', fontSize: '9.5px' }}>
+            {files.length} {files.length === 1 ? 'file' : 'files'}
+          </span>
         </div>
 
-        {/* Examples folder */}
-        {examplesOpen && (
+        {workspaceOpen && (
           <div className="file-tree-list">
-            <div
-              className="file-tree-item"
-              style={{ paddingLeft: '14px', color: '#e2e8f0', fontWeight: 500 }}
-            >
-              <div className="file-item-left">
-                <FolderOpen size={14} color="#f59e0b" />
-                <span>examples</span>
-              </div>
-              <span className="file-item-badge">{exampleFiles.length} files</span>
-            </div>
-
-            {exampleFiles.map(file => (
-              <div
-                key={file.id}
-                className={`file-tree-item ${file.id === activeFileId ? 'active' : ''}`}
-                style={{ paddingLeft: '28px' }}
-                onClick={() => onSelectFile(file.id)}
-              >
-                <div className="file-item-left">
-                  <FileCode size={13} color="#38bdf8" />
-                  <span>{file.name}</span>
-                </div>
-              </div>
-            ))}
-
-            {/* User created files */}
-            {userFiles.map(file => (
-              <div
-                key={file.id}
-                className={`file-tree-item ${file.id === activeFileId ? 'active' : ''}`}
-                style={{ paddingLeft: '14px' }}
-                onClick={() => onSelectFile(file.id)}
-              >
-                <div className="file-item-left">
-                  <FileCode size={14} color="#34d399" />
-                  <span>{file.name}</span>
-                </div>
-                {onDeleteFile && (
-                  <button
-                    className="tab-close-btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDeleteFile(file.id);
-                    }}
-                    title="Delete file"
-                  >
-                    <Trash2 size={11} color="var(--accent-rose)" />
-                  </button>
-                )}
-              </div>
-            ))}
-
-            {/* Inline New File Input */}
+            {/* Inline New File Form */}
             {isCreatingFile && (
-              <form onSubmit={handleCreateSubmit} style={{ padding: '4px 14px' }}>
+              <form onSubmit={handleCreateSubmit} style={{ padding: '6px 12px' }}>
                 <input
                   type="text"
                   autoFocus
-                  placeholder="filename.plain"
+                  placeholder="script_name.plain"
                   value={newFileName}
                   onChange={(e) => setNewFileName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') setIsCreatingFile(false);
+                  }}
                   onBlur={() => {
                     if (!newFileName.trim()) setIsCreatingFile(false);
                   }}
                   style={{
                     width: '100%',
-                    background: '#181818',
+                    background: '#121214',
                     border: '1px solid var(--vscode-accent)',
-                    borderRadius: '2px',
-                    padding: '3px 6px',
+                    borderRadius: '3px',
+                    padding: '4px 8px',
                     fontSize: '12px',
                     color: '#ffffff',
                     outline: 'none',
@@ -194,6 +150,48 @@ export default function VsSidebar({
                 />
               </form>
             )}
+
+            {files.length === 0 && !isCreatingFile && (
+              <div style={{ padding: '16px 12px', textAlign: 'center', color: 'var(--text-dim)', fontSize: '11px' }}>
+                <p>No files in this workspace.</p>
+                <button
+                  className="btn-secondary"
+                  onClick={() => setIsCreatingFile(true)}
+                  style={{ marginTop: '8px', padding: '4px 8px', fontSize: '11px' }}
+                >
+                  <FilePlus size={12} />
+                  <span>Create .plain file</span>
+                </button>
+              </div>
+            )}
+
+            {/* User workspace files */}
+            {files.map(file => (
+              <div
+                key={file.id}
+                className={`file-tree-item ${file.id === activeFileId ? 'active' : ''}`}
+                onClick={() => onSelectFile(file.id)}
+              >
+                <div className="file-item-left">
+                  <FileCode size={14} color="#34d399" />
+                  <span>{file.name}</span>
+                </div>
+                {onDeleteFile && files.length > 1 && (
+                  <button
+                    className="tab-close-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (window.confirm(`Delete ${file.name}?`)) {
+                        onDeleteFile(file.id);
+                      }
+                    }}
+                    title={`Delete ${file.name}`}
+                  >
+                    <Trash2 size={12} color="var(--accent-rose)" />
+                  </button>
+                )}
+              </div>
+            ))}
           </div>
         )}
       </div>

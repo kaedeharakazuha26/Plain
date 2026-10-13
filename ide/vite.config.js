@@ -21,6 +21,77 @@ function plainLanguagePlugin() {
           return;
         }
 
+        if (req.method === 'POST' && req.url === '/api/terminal/exec') {
+          let body = '';
+          req.on('data', chunk => { body += chunk; });
+          req.on('end', async () => {
+            let payload = {};
+            try {
+              payload = JSON.parse(body);
+            } catch {
+              res.statusCode = 400;
+              res.end(JSON.stringify({ error: 'Invalid JSON' }));
+              return;
+            }
+
+            const { command, args = [], cwd, stdin, syncFile } = payload;
+            const workspaceDir = cwd || path.resolve(__dirname, '..');
+
+            if (syncFile && syncFile.name && typeof syncFile.content === 'string') {
+              try {
+                const fs = await import('fs');
+                const filePath = path.resolve(workspaceDir, syncFile.name);
+                fs.writeFileSync(filePath, syncFile.content, 'utf8');
+              } catch (e) {
+                console.warn('Failed to sync file:', e);
+              }
+            }
+
+            let cmdToRun = command;
+            let finalArgs = args;
+
+            if (command === 'plain' || command === './plain') {
+              cmdToRun = binaryPath;
+            }
+
+            const child = spawn(cmdToRun, finalArgs, {
+              cwd: workspaceDir,
+              shell: true,
+              env: { ...process.env, PATH: `${process.env.HOME}/.cargo/bin:${process.env.PATH}` }
+            });
+
+            let stdout = '';
+            let stderr = '';
+
+            child.stdout.on('data', d => { stdout += d.toString(); });
+            child.stderr.on('data', d => { stderr += d.toString(); });
+
+            if (stdin) {
+              child.stdin.write(stdin);
+            }
+            child.stdin.end();
+
+            child.on('close', code => {
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({
+                stdout,
+                stderr,
+                code: code ?? 0
+              }));
+            });
+
+            child.on('error', err => {
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({
+                stdout: '',
+                stderr: err.message,
+                code: 1
+              }));
+            });
+          });
+          return;
+        }
+
         if (req.method === 'POST' && req.url === '/api/run') {
           let body = '';
           req.on('data', chunk => {

@@ -5,14 +5,14 @@ import {
   Layers,
   Cpu,
   Database,
-  Trash2,
-  Copy,
   ChevronDown,
   ChevronUp,
   X,
-  Maximize2
+  FileCode,
+  TerminalSquare
 } from 'lucide-react';
 
+import RealTerminal from './RealTerminal';
 import ConsoleOutput from './ConsoleOutput';
 import AstViewer from './AstViewer';
 import TokenViewer from './TokenViewer';
@@ -27,12 +27,16 @@ export default function VsBottomDock({
   dockHeight,
   setDockHeight,
   onInputSubmit,
-  onResetSession
+  onResetSession,
+  activeFile,
+  activeCode,
+  files,
+  onSelectFile
 }) {
   const isExpanded = dockHeight > 250;
 
   const toggleHeight = () => {
-    setDockHeight(isExpanded ? 220 : 400);
+    setDockHeight(isExpanded ? 220 : 420);
   };
 
   const errorCount = result.error ? 1 : 0;
@@ -48,9 +52,19 @@ export default function VsBottomDock({
           <button
             className={`dock-tab-btn ${activeTab === 'terminal' ? 'active' : ''}`}
             onClick={() => setActiveTab('terminal')}
+            title="Real interactive shell terminal"
           >
-            <TerminalIcon size={13} />
+            <TerminalIcon size={13} color="var(--accent-cyan)" />
             <span>Terminal</span>
+          </button>
+
+          <button
+            className={`dock-tab-btn ${activeTab === 'output' ? 'active' : ''}`}
+            onClick={() => setActiveTab('output')}
+            title="Compiler execution log"
+          >
+            <TerminalSquare size={13} />
+            <span>Output</span>
             {outputCount > 0 && <span className="dock-tab-badge">{outputCount}</span>}
           </button>
 
@@ -114,8 +128,17 @@ export default function VsBottomDock({
         </div>
       </div>
 
-      <div className="dock-body">
+      <div className="dock-body" style={{ padding: activeTab === 'terminal' ? 0 : '12px' }}>
         {activeTab === 'terminal' && (
+          <RealTerminal
+            activeFile={activeFile}
+            activeCode={activeCode}
+            files={files}
+            onFileSelect={onSelectFile}
+          />
+        )}
+
+        {activeTab === 'output' && (
           <ConsoleOutput
             output={result.output}
             error={result.error}

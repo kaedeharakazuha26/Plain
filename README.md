@@ -1,8 +1,8 @@
-# Plain — a tiny English-like language, in Rust (v0.2)
+# Plain — an English-like Programming Language, in Rust (v0.2)
 
-You write basic English. A Rust program (the interpreter) reads it and runs it.
+You write basic English sentences. A Rust program reads, parses, and executes it.
 
-```
+```plain
 set name to "jhomar"
 ask age with "How old are you?"
 
@@ -16,48 +16,103 @@ set scores to [80, 90, 75]
 add 100 to scores
 
 for each score in scores
-    say score
+    say "Score: " + score
 end
 
 if age is between 13 and 19
-    say "teenager"
+    say "Status: teenager"
 otherwise if age is at least 20
-    say "adult"
+    say "Status: adult"
 otherwise
-    say "kid"
+    say "Status: kid"
 end
 ```
 
-## Run it
+---
+
+## Quick Start & CLI
+
+Run Plain files directly using the Rust CLI:
 
 ```bash
-cargo run                            # built-in demo
-cargo run -- examples/hello.plain    # v0.1 syntax (still works)
-cargo run -- examples/features.plain # v0.2 syntax tour
-cargo run -- examples/ask.plain      # input demo (type answers)
-cargo test                           # 6 tests
+cargo run                            # Built-in demo
+cargo run -- examples/hello.plain    # v0.1 syntax demo
+cargo run -- examples/features.plain # v0.2 full syntax tour
+cargo run -- examples/ask.plain      # Interactive user input demo
+cargo test                           # Run test suite (6 tests passing)
 ```
 
-## Frontend IDE (VS Code & Desktop App)
-
-Test and write Plain code visually with a modern VS Code-style IDE and desktop application:
+Compile a release binary:
 
 ```bash
-# In your browser:
-npm run ide                          # starts on http://localhost:5173
-# or run the startup script:
-./start-ide.sh
+cargo build --release
+./target/release/plain examples/features.plain
+```
 
-# Or as a native Desktop App (Tauri):
+---
+
+## Modern VS Code IDE & Desktop App
+
+Plain includes a dedicated IDE with a VS Code aesthetic, built with React, Vite, and Tauri v2:
+
+```bash
+# In your browser (Vite):
+./start-ide.sh
+# or:
+npm run ide                          # Starts at http://localhost:5173
+
+# As a native Desktop App (Tauri v2):
 npm run tauri:dev
 ```
 
-- **File Explorer (Left)**: Browse example `.plain` files, create and edit custom files.
-- **Code Editor (Center)**: Syntax highlighting for Plain English v0.2, line numbers, error indicators.
-- **Terminal & Inspector (Bottom Dock)**: Live stdout output, AST tree breakdown, lexer tokens, memory variables.
-- **English Assistant (Right)**: 1-click sentence builder snippets & grammar cheat sheet.
+### IDE Features
 
-## How it works
+1. **Clean Workspace Explorer (Left Sidebar)**:
+   - Dedicated project file management with your `.plain` files.
+   - Create new `.plain` files inline, delete files, and view file counts.
+   - Open folders and navigate custom workspaces without hardcoded distractions.
+
+2. **Top Menu Bar & File Management**:
+   - **File Menu Dropdown**:
+     - **New File** (<kbd>Ctrl+N</kbd>): Create a new file with `.plain` extension.
+     - **Open File...** (<kbd>Ctrl+O</kbd>): Pick and load `.plain` files from your computer.
+     - **Open Folder...**: Pick an entire project folder to load into the workspace.
+     - **Save** (<kbd>Ctrl+S</kbd>): Save code changes and download/write to disk.
+     - **Save As...** (<kbd>Ctrl+Shift+S</kbd>): Save as a new `.plain` file.
+     - **Close Tab** (<kbd>Ctrl+W</kbd>): Close active file tab.
+   - Quick search breadcrumbs and engine switcher (**🦀 Rust Native** / **⚡ Web Simulator**).
+
+3. **Smooth Resizable Panes**:
+   - Draggable vertical resizer for the Left Explorer (160px – 520px).
+   - Draggable vertical resizer for the Right Assistant (220px – 650px).
+   - Draggable horizontal resizer for the Bottom Dock (110px – 600px).
+
+4. **Real Terminal (Powered by Xterm.js)**:
+   - Embedded real interactive terminal running directly inside the IDE.
+   - Built-in shell prompt: `plain@ide:~/workspace$ ` with full ANSI color themes, block cursor, and command history (<kbd>↑</kbd>/<kbd>↓</kbd>).
+   - Click **Run File Here** or type `run` to execute the active `.plain` file in the terminal.
+   - Run any command: `plain <file.plain>`, `ls`, `cat <file>`, `pwd`, `clear`, or Linux bash commands.
+   - Full support for interactive terminal input (`ask` prompts).
+
+5. **Diagnostic Output & Inspection Dock**:
+   - **Terminal Tab**: Real PTY terminal emulator.
+   - **Output Tab**: Live execution stdout stream and interactive input prompt.
+   - **Problems Tab**: Compiler errors with line diagnostics.
+   - **AST Tree Tab**: Interactive hierarchical AST node viewer.
+   - **Tokens Tab**: Lexer token breakdown chips.
+   - **Variables Tab**: Real-time memory variables table.
+
+6. **English Assistant & Sentence Builder (Right Sidebar)**:
+   - **Sentence Builder**:
+     - Includes a 4-step instruction guide on building Plain sentences.
+     - Category filter pills: `All`, `Input & Say`, `Variables`, `Functions`, `Lists & Loops`, `Conditionals`, and `Helpers`.
+     - One-click insertion directly into your editor cursor.
+   - **Language Reference**:
+     - Comprehensive Plain v0.2 documentation with syntax tags, explanation, and sample snippets.
+
+---
+
+## How It Works
 
 ```
 your .plain file
@@ -66,70 +121,115 @@ lexer.rs        text  -> tokens        set | name | to | "jhomar"
       ↓
 parser.rs       tokens -> AST tree     Set { name, value }
       ↓
-interpreter.rs  walks the tree and executes it (variables in a HashMap,
-                functions in a second HashMap, `return` bubbles up as a value)
+interpreter.rs  walks the tree and executes it:
+                - Environment scope HashMaps for variables and functions
+                - `return` bubbles values out of functions cleanly
+                - `ask` reads interactive terminal input
 ```
 
-## Syntax
+---
 
-**Basics**
-- `set x to <expr>` / `change x to <expr>` — create/change a variable
-- `say <expr>` — print
-- `# comment`
+## Language Reference (v0.2)
 
-**Input (new in v0.2)**
-- `ask name with "What is your name?"` — prints the prompt, reads a line.
-  If the user types a number it is stored as a number, else as text.
-
-**Functions (new in v0.2)**
+### 1. Variables & Values
+```plain
+set name to "jhomar"
+change score to 100
+increase lives by 1
+decrease health by 10
 ```
-define sum_of with a, b
-    return a plus b
+
+### 2. Interactive User Input
+```plain
+ask user_name with "What is your name?"
+say "Hello, " + user_name
+
+ask age with "How old are you?"
+say "Next year you will be: " + (age plus 1)
+```
+- Automatically parses numeric responses as numbers, and text responses as text strings.
+
+### 3. Functions & Isolated Scope
+```plain
+define calculate_total with subtotal, tax_rate
+    return subtotal plus (subtotal multiplied by tax_rate)
 end
-set total to call sum_of with 5, 3
-call greet with "jhomar"        # as a statement, result ignored
+
+set total to call calculate_total with 100, 0.15
+say "Total amount: $" + total
 ```
-Params are comma-separated after `with`. Function bodies get their own
-scope (they can read outer variables; their changes don't leak out).
-Names can't be keywords — you can't name a function `add` or a variable
-`say`, those words are reserved.
+- Parameters are comma-separated after `with`.
+- Functions maintain local scope (outer variables are accessible; local assignments do not leak).
 
-**Lists (new in v0.2)**
-- `set scores to [80, 90, 75]`
-- `add 100 to scores` — appends (on a number it adds, on text it joins)
-- `for each score in scores ... end`
-- `length of scores`, `first of scores`, `last of scores`,
-  `item 2 of scores` (counting starts at 1, like English)
+### 4. Lists & For Each Iteration
+```plain
+set scores to [80, 90, 75]
+add 100 to scores
 
-**Control flow**
-- `if <expr> ... otherwise if <expr> ... otherwise ... end` (`then` optional)
-- `repeat <expr> times ... end`
-- `while <expr> ... end` (1,000,000-iteration safety stop)
+for each score in scores
+    say "Score: " + score
+end
+```
 
-**Variable shortcuts (new in v0.2)**
-- `increase lives` / `increase lives by 2` / `decrease lives by 1`
+### 5. Built-in Helpers (1-Indexed)
+```plain
+say length of scores          # Length of list or text
+say first of scores           # First element or letter
+say last of scores            # Last element or letter
+say item 2 of scores          # 1-indexed element access
+say uppercase of "hello"      # "HELLO"
+say lowercase of "WORLD"      # "world"
+```
 
-**Values & math**
-- Numbers, text `"..."`, `true` / `false`, lists
-- `+ - * / ( )`, word forms: `plus`, `minus`, `multiplied by`, `divided by`
-- `+` also joins text and lists
+### 6. Chained Conditionals
+```plain
+if age is between 13 and 19
+    say "Teenager"
+otherwise if age is at least 20
+    say "Adult"
+otherwise
+    say "Kid"
+end
+```
 
-**Comparisons (plain English)**
-`is above`, `is below`, `is greater than`, `is less than`, `is at least`,
-`is at most`, `is equal to`, `is not equal to`, `is different from`,
-`is same as`, `is between 13 and 19`, plain `is` — plus symbols
-`> < >= <= == !=`, and logic `and` / `or` / `not`
+### 7. Natural English Comparisons & Math
+```plain
+is between 10 and 20          # Range check
+is above / is greater than    # >
+is below / is less than       # <
+is at least                   # >=
+is at most                    # <=
+is equal to / is same as      # ==
+is not equal to               # !=
+plus, minus, multiplied by, divided by
+and, or, not
+```
 
-**Text helpers (new in v0.2)**
-`uppercase of name`, `lowercase of name`, `length of name`
+### 8. Loops
+```plain
+repeat 3 times
+    say "Echo!"
+end
 
-Errors are plain messages with line numbers, e.g.
-`Unknown name 'foo' (did you forget: set foo to ...?)`
+while count is below 5
+    increase count by 1
+end
+```
 
-## Ideas for v0.3
+---
 
-- text tools: `contains`, splitting/joining text
-- `remove ... from <list>`, sorting
-- dictionaries in English: `set person to name "Ana", age 20`
-- reading/writing files
-- transpiling to Rust instead of interpreting (a real compiler back-end)
+## Running Tests
+
+All interpreter features are covered by automated unit tests:
+
+```bash
+cargo test
+```
+
+Tests include:
+- Pipeline lexer/parser/interpreter execution
+- Functions, parameter passing, and return values
+- Lists and `for each` loops
+- Text helpers and English comparison operations
+- Division by zero error handling
+- Unknown variable error diagnostics

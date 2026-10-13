@@ -8,44 +8,68 @@ import VsBottomDock from './components/VsBottomDock';
 import VsRightSidebar from './components/VsRightSidebar';
 import VsStatusBar from './components/VsStatusBar';
 
-import { EXAMPLES } from './examples';
 import { runSimulator } from './simulator';
 
-// Initial files in workspace
-const INITIAL_FILES = EXAMPLES.map(ex => ({
-  id: ex.id,
-  name: `${ex.id}.plain`,
-  code: ex.code,
-  category: 'examples'
-}));
+// Clean default starter file in user workspace
+const DEFAULT_FILES = [
+  {
+    id: 'main',
+    name: 'main.plain',
+    code: `# Welcome to Plain Language!
+# Write natural English code below:
+
+ask user_name with "What is your name?"
+say "Hello, " + uppercase of user_name + "!"
+
+set scores to [85, 92, 78]
+add 95 to scores
+
+for each score in scores
+    say "Score: " + score
+end
+`,
+    category: 'workspace'
+  }
+];
 
 export default function App() {
+  const [folderName, setFolderName] = useState('plain-lang');
+
   const [files, setFiles] = useState(() => {
     const saved = localStorage.getItem('plain_ide_files');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        // Filter out any legacy hardcoded examples
+        const nonExamples = parsed.filter(f => f.category !== 'examples');
+        if (nonExamples.length > 0) {
+          return nonExamples;
+        }
       } catch {}
     }
-    return INITIAL_FILES;
+    return DEFAULT_FILES;
   });
 
   const [openFileIds, setOpenFileIds] = useState(() => {
-    return [INITIAL_FILES[0].id, INITIAL_FILES[1].id];
+    return [files[0]?.id || DEFAULT_FILES[0].id];
   });
 
-  const [activeFileId, setActiveFileId] = useState(INITIAL_FILES[0].id);
+  const [activeFileId, setActiveFileId] = useState(files[0]?.id || DEFAULT_FILES[0].id);
+
+  // Hidden file inputs for opening file and opening folder
+  const fileInputRef = useRef(null);
+  const folderInputRef = useRef(null);
 
   // Layout UI Toggles & Resizable Dimensions
   const [activeActivityView, setActiveActivityView] = useState('explorer'); // 'explorer' | 'guide' | null
   const [bottomDockOpen, setBottomDockOpen] = useState(true);
   const [rightSidebarOpen, setRightSidebarOpen] = useState(true);
-  const [dockTab, setDockTab] = useState('terminal'); // 'terminal' | 'problems' | 'ast' | 'tokens' | 'variables'
+  const [dockTab, setDockTab] = useState('terminal'); // 'terminal' | 'output' | 'problems' | 'ast' | 'tokens' | 'variables'
 
   // Resizable Panes State
   const [sidebarWidth, setSidebarWidth] = useState(250);
   const [rightSidebarWidth, setRightSidebarWidth] = useState(330);
-  const [dockHeight, setDockHeight] = useState(250);
+  const [dockHeight, setDockHeight] = useState(260);
 
   const isResizingLeft = useRef(false);
   const isResizingRight = useRef(false);
@@ -75,15 +99,12 @@ export default function App() {
   useEffect(() => {
     const handleMouseMove = (e) => {
       if (isResizingLeft.current) {
-        // Left sidebar starts after 48px activity bar
         const newWidth = Math.max(160, Math.min(520, e.clientX - 48));
         setSidebarWidth(newWidth);
       } else if (isResizingRight.current) {
-        // Right sidebar width is distance from right window edge
         const newWidth = Math.max(220, Math.min(650, window.innerWidth - e.clientX));
         setRightSidebarWidth(newWidth);
       } else if (isResizingBottom.current) {
-        // Bottom dock height is distance from bottom window edge minus status bar (24px)
         const newHeight = Math.max(110, Math.min(600, window.innerHeight - e.clientY - 24));
         setDockHeight(newHeight);
       }
@@ -187,7 +208,9 @@ export default function App() {
           executionTimeMs: data.executionTimeMs || Math.round((performance.now() - startTime) * 100) / 100,
           engine: 'tauri-desktop'
         });
-        if (!data.success && data.error) setBottomDockOpen(true);
+        if (!data.success && data.error) {
+          setBottomDockOpen(true);
+        }
         setIsRunning(false);
         return;
       } catch (err) {
@@ -216,10 +239,8 @@ export default function App() {
           engine: 'rust-native'
         });
 
-        // If error or waiting for input, ensure dock is open
-        if ((!data.success && data.error) || data.waiting_for_input) {
+        if (!data.success && data.error) {
           setBottomDockOpen(true);
-          setDockTab('terminal');
         }
       } catch (err) {
         console.warn('Rust backend error, falling back to simulator:', err);
@@ -241,20 +262,19 @@ export default function App() {
     }
   }, []);
 
-  // Run fresh code (clears previous session inputs)
+  // Run fresh code
   const handleRunFresh = () => {
     setSessionInputs([]);
     executeCode(activeCode, []);
   };
 
-  // Handle Terminal Interactive Input
+  // Terminal Interactive Input handler
   const handleTerminalInput = (inputValue) => {
     const nextInputs = [...sessionInputs, inputValue];
     setSessionInputs(nextInputs);
     executeCode(activeCode, nextInputs);
   };
 
-  // Restart terminal session
   const handleResetSession = () => {
     setSessionInputs([]);
     executeCode(activeCode, []);
@@ -274,7 +294,185 @@ export default function App() {
     }
   };
 
-  // File Operations
+  // --- FILE MANAGEMENT OPERATIONS ---
+
+  // 1. Create New File
+  const handleCreateFile = (filename) => {
+    let finalName = (filename || '').trim();
+    if (!finalName) {
+      finalName = `script_${files.length + 1}.plain`;
+    }
+    if (!finalName.endsWith('.plain')) {
+      finalName += '.plain';
+    }
+    const id = finalName.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+    const newFile = {
+      id,
+      name: finalName,
+      code: `# ${finalName}\n# Write Plain English code here:\n\nask user_name with "What is your name?"\nsay "Hello, " + user_name\n`,
+      category: 'workspace'
+    };
+    setFiles(prev => [...prev.filter(f => f.id !== id), newFile]);
+    setOpenFileIds(prev => Array.from(new Set([...prev, id])));
+    setActiveFileId(id);
+    setSessionInputs([]);
+    executeCode(newFile.code, []);
+  };
+
+  const handleNewFilePrompt = () => {
+    const name = window.prompt("Enter new file name (.plain):", `script_${files.length + 1}.plain`);
+    if (name) {
+      handleCreateFile(name);
+    }
+  };
+
+  // 2. Open File...
+  const handleOpenFile = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+      fileInputRef.current.click();
+    }
+  };
+
+  const onFileInputChange = async (e) => {
+    const selected = Array.from(e.target.files || []);
+    if (selected.length === 0) return;
+
+    const loaded = [];
+    for (const f of selected) {
+      const text = await f.text();
+      let fName = f.name;
+      if (!fName.endsWith('.plain') && !fName.endsWith('.txt')) {
+        fName += '.plain';
+      }
+      const id = fName.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+      loaded.push({
+        id,
+        name: fName,
+        code: text,
+        category: 'workspace'
+      });
+    }
+
+    setFiles(prev => {
+      const existingIds = new Set(prev.map(item => item.id));
+      const newItems = loaded.filter(item => !existingIds.has(item.id));
+      return [...prev, ...newItems];
+    });
+
+    const last = loaded[loaded.length - 1];
+    if (last) {
+      setOpenFileIds(prev => Array.from(new Set([...prev, last.id])));
+      setActiveFileId(last.id);
+      executeCode(last.code, []);
+    }
+  };
+
+  // 3. Open Folder...
+  const handleOpenFolder = () => {
+    if (folderInputRef.current) {
+      folderInputRef.current.value = '';
+      folderInputRef.current.click();
+    }
+  };
+
+  const onFolderInputChange = async (e) => {
+    const selected = Array.from(e.target.files || []);
+    if (selected.length === 0) return;
+
+    const firstRel = selected[0].webkitRelativePath || '';
+    const rootDir = firstRel.split('/')[0] || 'workspace';
+    setFolderName(rootDir);
+
+    const loaded = [];
+    for (const f of selected) {
+      if (f.name.startsWith('.')) continue;
+      if (f.webkitRelativePath.includes('node_modules')) continue;
+      if (f.name.endsWith('.plain') || f.name.endsWith('.txt')) {
+        const text = await f.text();
+        const id = f.name.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+        loaded.push({
+          id,
+          name: f.name,
+          code: text,
+          category: rootDir
+        });
+      }
+    }
+
+    if (loaded.length > 0) {
+      setFiles(loaded);
+      setOpenFileIds([loaded[0].id]);
+      setActiveFileId(loaded[0].id);
+      executeCode(loaded[0].code, []);
+    }
+  };
+
+  // 4. Save File (Ctrl+S)
+  const handleSaveFile = () => {
+    if (!activeFile) return;
+
+    // Trigger local browser download / save to disk
+    try {
+      const blob = new Blob([activeCode], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = activeFile.name.endsWith('.plain') ? activeFile.name : `${activeFile.name}.plain`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.warn('Save failed:', err);
+    }
+  };
+
+  // 5. Save As...
+  const handleSaveAs = () => {
+    if (!activeFile) return;
+    const chosen = window.prompt("Save as (.plain filename):", activeFile.name);
+    if (chosen && chosen.trim()) {
+      let finalName = chosen.trim();
+      if (!finalName.endsWith('.plain')) finalName += '.plain';
+      const newId = finalName.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+      const newFile = {
+        id: newId,
+        name: finalName,
+        code: activeCode,
+        category: 'workspace'
+      };
+      setFiles(prev => [...prev.filter(f => f.id !== newId), newFile]);
+      setActiveFileId(newId);
+      setOpenFileIds(prev => Array.from(new Set([...prev, newId])));
+
+      // Download
+      const blob = new Blob([activeCode], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = finalName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  };
+
+  // 6. Close File Tab
+  const handleCloseFile = (id) => {
+    const targetId = id || activeFileId;
+    const nextOpen = openFileIds.filter(fId => fId !== targetId);
+    setOpenFileIds(nextOpen);
+    if (activeFileId === targetId && nextOpen.length > 0) {
+      const nextActiveId = nextOpen[nextOpen.length - 1];
+      setActiveFileId(nextActiveId);
+      const nextFile = files.find(f => f.id === nextActiveId);
+      if (nextFile) executeCode(nextFile.code, []);
+    }
+  };
+
+  // Select file tab
   const handleSelectFile = (id) => {
     setActiveFileId(id);
     if (!openFileIds.includes(id)) {
@@ -285,31 +483,6 @@ export default function App() {
       setSessionInputs([]);
       executeCode(targetFile.code, []);
     }
-  };
-
-  const handleCloseFile = (id) => {
-    const nextOpen = openFileIds.filter(fId => fId !== id);
-    setOpenFileIds(nextOpen);
-    if (activeFileId === id && nextOpen.length > 0) {
-      setActiveFileId(nextOpen[nextOpen.length - 1]);
-    }
-  };
-
-  const handleCreateFile = (filename) => {
-    let finalName = filename.trim();
-    if (!finalName.endsWith('.plain')) finalName += '.plain';
-    const id = finalName.toLowerCase().replace(/[^a-z0-9_]/g, '_');
-    const newFile = {
-      id,
-      name: finalName,
-      code: `# ${finalName}\n# Write Plain English code here:\n\nask user_name with "What is your name?"\nsay "Hello, " + user_name\n`,
-      category: 'workspace'
-    };
-    setFiles(prev => [...prev, newFile]);
-    setOpenFileIds(prev => [...prev, id]);
-    setActiveFileId(id);
-    setSessionInputs([]);
-    executeCode(newFile.code, []);
   };
 
   const handleDeleteFile = (id) => {
@@ -331,8 +504,49 @@ export default function App() {
     setSessionInputs([]);
   };
 
+  // Keyboard Shortcuts: Ctrl+S (Save), Ctrl+O (Open), Ctrl+N (New File), Ctrl+W (Close tab)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        handleSaveFile();
+      } else if ((e.ctrlKey || e.metaKey) && e.key === 'o') {
+        e.preventDefault();
+        handleOpenFile();
+      } else if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+        e.preventDefault();
+        handleNewFilePrompt();
+      } else if ((e.ctrlKey || e.metaKey) && e.key === 'w') {
+        e.preventDefault();
+        if (activeFileId) handleCloseFile(activeFileId);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeFile, activeCode, activeFileId, files]);
+
   return (
     <>
+      {/* Hidden inputs for native file & folder pickers */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".plain,.txt"
+        multiple
+        style={{ display: 'none' }}
+        onChange={onFileInputChange}
+      />
+      <input
+        ref={folderInputRef}
+        type="file"
+        webkitdirectory="true"
+        directory="true"
+        multiple
+        style={{ display: 'none' }}
+        onChange={onFolderInputChange}
+      />
+
       {/* 1. TOP TITLEBAR */}
       <VsTitleBar
         activeFile={activeFile}
@@ -346,6 +560,13 @@ export default function App() {
         bottomDockOpen={bottomDockOpen}
         toggleRightSidebar={() => setRightSidebarOpen(!rightSidebarOpen)}
         rightSidebarOpen={rightSidebarOpen}
+        onNewFile={handleNewFilePrompt}
+        onOpenFile={handleOpenFile}
+        onOpenFolder={handleOpenFolder}
+        onSaveFile={handleSaveFile}
+        onSaveAs={handleSaveAs}
+        onCloseFile={() => handleCloseFile(activeFileId)}
+        folderName={folderName}
       />
 
       {/* 2. MAIN WORKSPACE */}
@@ -357,7 +578,7 @@ export default function App() {
           toggleBottomDock={(forceOpen) => setBottomDockOpen(forceOpen ?? !bottomDockOpen)}
         />
 
-        {/* Primary Sidebar (Explorer) */}
+        {/* Primary Sidebar (Explorer with clean files, no hardcoded examples) */}
         {activeActivityView === 'explorer' && (
           <>
             <VsSidebar
@@ -368,6 +589,9 @@ export default function App() {
               onCloseFile={handleCloseFile}
               onCreateFile={handleCreateFile}
               onDeleteFile={handleDeleteFile}
+              onOpenFile={handleOpenFile}
+              onOpenFolder={handleOpenFolder}
+              folderName={folderName}
               width={sidebarWidth}
             />
             {/* Resizer Handle: Left Sidebar */}
@@ -379,7 +603,7 @@ export default function App() {
           </>
         )}
 
-        {/* Center Column: Editor Tabs + Editor + Bottom Terminal Dock */}
+        {/* Center Column: Editor Tabs + Editor + Bottom Real Terminal Dock */}
         <section className="vs-center-col">
           <VsEditorTabs
             files={files}
@@ -387,7 +611,7 @@ export default function App() {
             activeFileId={activeFileId}
             onSelectFile={handleSelectFile}
             onCloseFile={handleCloseFile}
-            onNewFile={() => handleCreateFile(`script_${files.length + 1}.plain`)}
+            onNewFile={handleNewFilePrompt}
           />
 
           <div className="vs-editor-container">
@@ -401,7 +625,7 @@ export default function App() {
             />
           </div>
 
-          {/* Bottom Dock (Terminal, AST, Tokens, Variables, Problems) */}
+          {/* Bottom Dock (Real Terminal, Compiler Output, AST, Tokens, Variables, Problems) */}
           {bottomDockOpen && (
             <>
               {/* Resizer Handle: Bottom Dock */}
@@ -420,6 +644,10 @@ export default function App() {
                 setDockHeight={setDockHeight}
                 onInputSubmit={handleTerminalInput}
                 onResetSession={handleResetSession}
+                activeFile={activeFile}
+                activeCode={activeCode}
+                files={files}
+                onSelectFile={handleSelectFile}
               />
             </>
           )}

@@ -1,14 +1,16 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Play,
   RotateCcw,
   Zap,
   Terminal,
   PanelRight,
-  Sparkles,
   Search,
-  Layout,
-  CheckCircle,
+  FilePlus,
+  FolderOpen,
+  Folder,
+  Save,
+  X,
   Cpu
 } from 'lucide-react';
 
@@ -23,8 +25,33 @@ export default function VsTitleBar({
   toggleBottomDock,
   bottomDockOpen,
   toggleRightSidebar,
-  rightSidebarOpen
+  rightSidebarOpen,
+  onNewFile,
+  onOpenFile,
+  onOpenFolder,
+  onSaveFile,
+  onSaveAs,
+  onCloseFile,
+  folderName = 'workspace'
 }) {
+  const [fileMenuOpen, setFileMenuOpen] = useState(false);
+  const fileMenuRef = useRef(null);
+
+  // Close dropdown menu on click outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (fileMenuRef.current && !fileMenuRef.current.contains(e.target)) {
+        setFileMenuOpen(false);
+      }
+    };
+    if (fileMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [fileMenuOpen]);
+
   return (
     <header className="vs-titlebar">
       <div className="titlebar-left">
@@ -34,18 +61,104 @@ export default function VsTitleBar({
         </div>
 
         <nav className="titlebar-menu">
-          <span className="menu-item">File</span>
-          <span className="menu-item">Edit</span>
-          <span className="menu-item">Selection</span>
+          {/* FILE MENU DROPDOWN */}
+          <div className="menu-dropdown-wrapper" ref={fileMenuRef}>
+            <span
+              className={`menu-item ${fileMenuOpen ? 'active' : ''}`}
+              onClick={() => setFileMenuOpen(!fileMenuOpen)}
+            >
+              File
+            </span>
+
+            {fileMenuOpen && (
+              <div className="titlebar-dropdown-menu">
+                <button
+                  className="dropdown-menu-item"
+                  onClick={() => {
+                    setFileMenuOpen(false);
+                    onNewFile();
+                  }}
+                >
+                  <FilePlus size={13} color="var(--accent-cyan)" />
+                  <span>New File (.plain)</span>
+                  <span className="dropdown-shortcut">Ctrl+N</span>
+                </button>
+
+                <button
+                  className="dropdown-menu-item"
+                  onClick={() => {
+                    setFileMenuOpen(false);
+                    onOpenFile();
+                  }}
+                >
+                  <FolderOpen size={13} color="var(--accent-amber)" />
+                  <span>Open File...</span>
+                  <span className="dropdown-shortcut">Ctrl+O</span>
+                </button>
+
+                <button
+                  className="dropdown-menu-item"
+                  onClick={() => {
+                    setFileMenuOpen(false);
+                    onOpenFolder();
+                  }}
+                >
+                  <Folder size={13} color="#f59e0b" />
+                  <span>Open Folder...</span>
+                </button>
+
+                <div className="dropdown-divider" />
+
+                <button
+                  className="dropdown-menu-item"
+                  onClick={() => {
+                    setFileMenuOpen(false);
+                    onSaveFile();
+                  }}
+                >
+                  <Save size={13} color="var(--accent-emerald)" />
+                  <span>Save</span>
+                  <span className="dropdown-shortcut">Ctrl+S</span>
+                </button>
+
+                <button
+                  className="dropdown-menu-item"
+                  onClick={() => {
+                    setFileMenuOpen(false);
+                    onSaveAs();
+                  }}
+                >
+                  <Save size={13} color="#34d399" />
+                  <span>Save As...</span>
+                  <span className="dropdown-shortcut">Ctrl+Shift+S</span>
+                </button>
+
+                <div className="dropdown-divider" />
+
+                <button
+                  className="dropdown-menu-item"
+                  onClick={() => {
+                    setFileMenuOpen(false);
+                    onCloseFile();
+                  }}
+                >
+                  <X size={13} />
+                  <span>Close File Tab</span>
+                  <span className="dropdown-shortcut">Ctrl+W</span>
+                </button>
+              </div>
+            )}
+          </div>
+
           <span className="menu-item" onClick={onRun}>Run</span>
           <span className="menu-item" onClick={toggleBottomDock}>Terminal</span>
           <span className="menu-item" onClick={toggleRightSidebar}>Guide</span>
         </nav>
       </div>
 
-      <div className="titlebar-center" title="Quick Open (Ctrl + P)">
+      <div className="titlebar-center" title="Current Active File">
         <Search size={12} />
-        <span>plain-lang — {activeFile?.name || 'hello.plain'}</span>
+        <span>{folderName} — {activeFile?.name || 'untitled.plain'}</span>
       </div>
 
       <div className="titlebar-right">
@@ -85,7 +198,7 @@ export default function VsTitleBar({
         <button
           className={`btn-icon-toggle ${bottomDockOpen ? 'active' : ''}`}
           onClick={toggleBottomDock}
-          title="Toggle Terminal / Output Panel"
+          title="Toggle Terminal Panel"
         >
           <Terminal size={14} />
         </button>
