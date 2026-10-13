@@ -47,16 +47,22 @@ function plainLanguagePlugin() {
               }
             }
 
+            let isPlainCmd = false;
             let cmdToRun = command;
             let finalArgs = args;
 
             if (command === 'plain' || command === './plain') {
               cmdToRun = binaryPath;
+              isPlainCmd = true;
+            } else if (command.endsWith('.plain')) {
+              cmdToRun = binaryPath;
+              finalArgs = [command, ...args];
+              isPlainCmd = true;
             }
 
             const child = spawn(cmdToRun, finalArgs, {
               cwd: workspaceDir,
-              shell: true,
+              shell: !isPlainCmd, // Do not use shell for binaryPath so paths with spaces work cleanly
               env: { ...process.env, PATH: `${process.env.HOME}/.cargo/bin:${process.env.PATH}` }
             });
 

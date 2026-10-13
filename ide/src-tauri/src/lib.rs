@@ -16,14 +16,33 @@ fn exec_terminal(command: String, args: Vec<String>, cwd: Option<String>, stdin_
   use std::io::Write;
   use std::process::{Command, Stdio};
 
-  let mut child = Command::new(&command)
-    .args(&args)
+  let mut cmd_to_run = command.clone();
+  let mut final_args = args.clone();
+
+  if command == "plain" || command == "./plain" || command.ends_with(".plain") {
+    if let Ok(curr) = std::env::current_dir() {
+      let candidates = [
+        curr.join("target/debug/plain"),
+        curr.join("../target/debug/plain"),
+        curr.join("../../target/debug/plain"),
+      ];
+      if let Some(found) = candidates.into_iter().find(|p| p.exists()) {
+        cmd_to_run = found.to_string_lossy().to_string();
+      }
+    }
+    if command.ends_with(".plain") {
+      final_args.insert(0, command.clone());
+    }
+  }
+
+  let mut child = Command::new(&cmd_to_run)
+    .args(&final_args)
     .current_dir(cwd.unwrap_or_else(|| ".".into()))
     .stdin(Stdio::piped())
     .stdout(Stdio::piped())
     .stderr(Stdio::piped())
     .spawn()
-    .map_err(|e| format!("Failed to execute '{}': {}", command, e))?;
+    .map_err(|e| format!("Failed to execute '{}': {}", cmd_to_run, e))?;
 
   if let Some(input) = stdin_data {
     if let Some(mut stdin) = child.stdin.take() {

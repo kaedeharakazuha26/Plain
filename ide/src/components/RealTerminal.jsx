@@ -277,25 +277,46 @@ export default function RealTerminal({
       return;
     }
 
+    if (cmd.endsWith('.plain')) {
+      const targetFile = files.find(f => f.name === cmd || f.id === cmd) || activeFile;
+      const fileName = targetFile ? targetFile.name : cmd;
+      term.writeln(`\x1b[36mRunning ${fileName} with Plain interpreter...\x1b[0m`);
+
+      const res = await executeShellCommand(`plain ${fileName}`);
+      if (res.stdout) {
+        const formatted = res.stdout.replace(/\r?\n/g, '\r\n');
+        term.write(formatted);
+      }
+      if (res.stderr) {
+        term.writeln(`\x1b[31m${res.stderr.replace(/\r?\n/g, '\r\n')}\x1b[0m`);
+      }
+
+      term.writeln(`\r\n\x1b[90m[Process finished with exit code ${res.code}]\x1b[0m\r\n`);
+      term.write(PROMPT);
+      isRunningRef.current = false;
+      return;
+    }
+
     if (cmd === 'run') {
-      if (!activeFile) {
+      const targetName = args[0] || (activeFile ? activeFile.name : null);
+      if (!targetName) {
         term.writeln('\x1b[31mNo active file to run.\x1b[0m');
         term.write(PROMPT);
         isRunningRef.current = false;
         return;
       }
 
-      term.writeln(`\x1b[36mRunning ${activeFile.name} with Plain interpreter...\x1b[0m`);
+      term.writeln(`\x1b[36mRunning ${targetName} with Plain interpreter...\x1b[0m`);
 
       // Run via executeShellCommand
-      const res = await executeShellCommand(`plain ${activeFile.name}`);
+      const res = await executeShellCommand(`plain ${targetName}`);
       if (res.stdout) {
         // Output lines with proper carriage returns
         const formatted = res.stdout.replace(/\r?\n/g, '\r\n');
         term.write(formatted);
       }
       if (res.stderr) {
-        term.writeln(`\x1b[31m${res.stderr}\x1b[0m`);
+        term.writeln(`\x1b[31m${res.stderr.replace(/\r?\n/g, '\r\n')}\x1b[0m`);
       }
 
       term.writeln(`\r\n\x1b[90m[Process finished with exit code ${res.code}]\x1b[0m\r\n`);
