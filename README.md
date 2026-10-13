@@ -612,9 +612,3 @@ plain-lang/
 
 ---
 
-## Ideas for v0.5
-
-- Expand compiler subset to support records and `for each` loops in generated Rust.
-- Add `ask` interactive input support to compiled standalone binaries (via embedded stdin reader).
-- Add `--release` one-step build command (`plain build <file.plain>` combining transpilation and `rustc`).
-- Map transpiled panic line numbers back to original `.plain` source lines for precise error reporting.
