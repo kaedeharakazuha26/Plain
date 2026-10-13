@@ -1,16 +1,11 @@
 import React, { useState } from 'react';
 import {
   Sparkles,
-  HelpCircle,
   Plus,
-  Play,
+  Check,
+  Code2,
   Terminal,
   Layers,
-  ChevronRight,
-  Info,
-  Code2,
-  Check,
-  Cpu,
   FileText
 } from 'lucide-react';
 
@@ -20,44 +15,45 @@ export default function SentenceBar({ onInsert }) {
 
   const categories = [
     { id: 'all', label: 'All' },
-    { id: 'v04', label: 'v0.4 Features' },
+    { id: 'v04', label: 'v0.4 New' },
     { id: 'records', label: 'Records' },
     { id: 'files', label: 'Files' },
     { id: 'text', label: 'Text Tools' },
     { id: 'lists', label: 'Lists & Stats' },
     { id: 'functions', label: 'Functions' },
-    { id: 'io', label: 'Input & Say' }
+    { id: 'io', label: 'Input & Say' },
+    { id: 'logic', label: 'Conditionals' }
   ];
 
   const snippets = [
-    // v0.4 String Interpolation & Compiler
+    // v0.4 Interpolation & Compiler
     {
       category: 'v04',
       keyword: 'interpolation',
       title: 'String text interpolation',
-      description: 'Embed variables and record field expressions directly within string literals with {expr}.',
-      code: 'set user to "Ana"\nset score to 95\nsay "Hello {user}, your score is {score}!"\n'
+      description: 'Embed variables and expressions directly inside text quotes with {expr}.',
+      code: 'set user to "Ana"\nset score to 100\nsay "Hello {user}, your score is {score}!"\n'
     },
     {
       category: 'v04',
       keyword: 'compile',
       title: 'Compile Plain to standalone Rust',
-      description: 'Translates Plain to Rust source that rustc builds into a standalone executable.',
-      code: '# In your terminal:\n# cargo run -- compile input.plain compiled.rs\n# rustc compiled.rs -o demo && ./demo\n'
+      description: 'Translates Plain code into standalone Rust source that rustc builds into a native executable.',
+      code: '# In your terminal:\n# cargo run -- compile examples/compile-demo.plain compiled.rs\n# rustc compiled.rs -o demo && ./demo\n'
     },
     // Records & Nested Records
     {
       category: 'records',
       keyword: 'record with',
       title: 'Create nested record',
-      description: 'Defines a key-value record, including nested child records.',
+      description: 'Defines a key-value record with sub-records inside it.',
       code: 'set person to record with name "Ana", address record with city "Cebu", zip 6000\nsay "{name of person} lives in {city of address of person}"\n'
     },
     {
       category: 'records',
       keyword: 'field of',
       title: 'Read nested record field',
-      description: 'Accesses a field from a record using English "field of record" chaining.',
+      description: 'Reads a field from a record using chained English "field of record" phrasing.',
       code: 'say city of address of person\n'
     },
     {
@@ -71,7 +67,7 @@ export default function SentenceBar({ onInsert }) {
       category: 'records',
       keyword: 'records in list',
       title: 'List of records iteration',
-      description: 'Store multiple records in a list and iterate through them with for each.',
+      description: 'Store multiple records inside a list and loop through them with for each.',
       code: 'set people to [record with name "Ana", age 21, record with name "Ben", age 17]\nfor each p in people\n    say "{name of p} is {age of p}"\nend\n'
     },
     // File operations
@@ -79,7 +75,7 @@ export default function SentenceBar({ onInsert }) {
       category: 'files',
       keyword: 'for each line',
       title: 'Read file line-by-line',
-      description: 'Iterates through each line in a text file directly without loading all at once.',
+      description: 'Iterates through each line in a text file without loading the entire file into memory at once.',
       code: 'for each line in file "examples/people.txt"\n    say line\nend\n'
     },
     {
@@ -87,14 +83,14 @@ export default function SentenceBar({ onInsert }) {
       keyword: 'save to file',
       title: 'Save text to file',
       description: 'Writes content to the specified file path, creating or replacing it.',
-      code: 'save "Hello Plain Files" to file "examples/notes.txt"\n'
+      code: 'save "First line of notes" to file "examples/notes.txt"\n'
     },
     {
       category: 'files',
       keyword: 'append to file',
       title: 'Append line to file',
       description: 'Appends a new line with content to the file.',
-      code: 'append "New appended record" to file "examples/notes.txt"\n'
+      code: 'append "Appended line" to file "examples/notes.txt"\n'
     },
     {
       category: 'files',
@@ -132,12 +128,19 @@ export default function SentenceBar({ onInsert }) {
       description: 'Replaces all occurrences of a search string with a new replacement.',
       code: 'set updated to replace "fox" with "dog" in "the quick brown fox"\nsay updated\n'
     },
+    {
+      category: 'text',
+      keyword: 'trim of',
+      title: 'Trim whitespace',
+      description: 'Trims leading and trailing whitespace from text.',
+      code: 'set clean to trim of "  hello world  "\nsay clean\n'
+    },
     // Lists & Aggregations
     {
       category: 'lists',
       keyword: 'sum of',
       title: 'Sum and average of list',
-      description: 'Computes statistical totals directly in English without loops.',
+      description: 'Computes statistical totals directly in English without manual loops.',
       code: 'set scores to [85, 90, 95]\nsay "Sum: " + sum of scores\nsay "Average: " + average of scores\n'
     },
     {
@@ -145,7 +148,7 @@ export default function SentenceBar({ onInsert }) {
       keyword: 'smallest of',
       title: 'Smallest and largest item',
       description: 'Finds minimum or maximum values in a list.',
-      code: 'set temperatures to [22, 18, 31, 25]\nsay "Min: " + smallest of temperatures\nsay "Max: " + largest of temperatures\n'
+      code: 'set scores to [22, 18, 31, 25]\nsay "Lowest: " + smallest of scores\nsay "Highest: " + largest of scores\n'
     },
     {
       category: 'lists',
@@ -176,6 +179,14 @@ export default function SentenceBar({ onInsert }) {
       title: 'Output text or expression',
       description: 'Prints strings, variables, or math results to stdout.',
       code: 'say "Welcome to Plain v0.4!"\n'
+    },
+    // Logic
+    {
+      category: 'logic',
+      keyword: 'if between',
+      title: 'Range condition check',
+      description: 'Checks if a number falls inclusively within a min and max range.',
+      code: 'set age to 16\nif age is between 13 and 19\n    say "Teenager"\notherwise\n    say "Other age"\nend\n'
     }
   ];
 
@@ -190,24 +201,26 @@ export default function SentenceBar({ onInsert }) {
   };
 
   return (
-    <div className="sentence-bar-container">
-      {/* Top Banner / Explanation Card */}
-      <div className="sentence-intro-card">
-        <div className="sentence-intro-badge">
-          <Sparkles size={13} />
-          <span>English Sentence Builder (v0.4)</span>
+    <div className="sentence-builder-wrapper">
+      {/* Instructions Card */}
+      <div className="builder-instructions-card">
+        <div className="instructions-title">
+          <Sparkles size={14} color="var(--accent-cyan)" />
+          <span>How to use Sentence Builder (v0.4)</span>
         </div>
-        <p className="sentence-intro-text">
-          Plain turns basic English sentences into working code. Click any pattern below to insert it into your editor or terminal!
-        </p>
+        <ul className="instructions-steps">
+          <li>1. Filter by category tab below or browse <code>All</code>.</li>
+          <li>2. Click the <strong>Insert</strong> button on any sentence block to place it at your editor cursor.</li>
+          <li>3. Press <kbd>Ctrl+S</kbd> to save, or run directly in the terminal below!</li>
+        </ul>
       </div>
 
-      {/* Category Filter Pills */}
-      <div className="sentence-categories">
+      {/* Category Tabs */}
+      <div className="builder-category-tabs">
         {categories.map(cat => (
           <button
             key={cat.id}
-            className={`sentence-cat-btn ${activeCategory === cat.id ? 'active' : ''}`}
+            className={`builder-tab-btn ${activeCategory === cat.id ? 'active' : ''}`}
             onClick={() => setActiveCategory(cat.id)}
           >
             {cat.label}
@@ -215,26 +228,38 @@ export default function SentenceBar({ onInsert }) {
         ))}
       </div>
 
-      {/* Snippet Card List */}
-      <div className="sentence-cards-list">
+      {/* Snippets List */}
+      <div className="builder-snippets-list">
         {filteredSnippets.map((item, idx) => (
-          <div
-            key={idx}
-            className="sentence-card"
-            onClick={() => handleSnippetClick(item.code, idx)}
-            title="Click to insert into editor"
-          >
-            <div className="sentence-card-header">
-              <span className="sentence-keyword-pill">{item.keyword}</span>
-              <span className="sentence-title">{item.title}</span>
-              <span className="sentence-insert-icon">
-                {copiedIdx === idx ? <Check size={12} color="var(--accent-green)" /> : <Plus size={12} />}
-              </span>
+          <div key={idx} className="builder-snippet-card">
+            <div className="snippet-card-header">
+              <span className="snippet-kw-badge">{item.keyword}</span>
+              <span className="snippet-title-text">{item.title}</span>
             </div>
-            <p className="sentence-desc">{item.description}</p>
-            <div className="sentence-code-preview">
+
+            <p className="snippet-desc-text">{item.description}</p>
+
+            <div className="snippet-code-preview">
               <code>{item.code.trim()}</code>
             </div>
+
+            <button
+              className={`btn-insert-snippet ${copiedIdx === idx ? 'inserted' : ''}`}
+              onClick={() => handleSnippetClick(item.code, idx)}
+              title="Insert snippet into code editor"
+            >
+              {copiedIdx === idx ? (
+                <>
+                  <Check size={11} />
+                  <span>Inserted!</span>
+                </>
+              ) : (
+                <>
+                  <Plus size={11} />
+                  <span>Insert</span>
+                </>
+              )}
+            </button>
           </div>
         ))}
       </div>
