@@ -1,0 +1,12 @@
+# Welcome to Plain Language!
+# Write natural English code below:
+
+ask user_name with "What is your name?"
+say "Hello, " + uppercase of user_name + "!"
+
+set scores to [85, 92, 78]
+add 95 to scores
+
+for each score in scores
+    say "Score: " + score
+end

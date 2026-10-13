@@ -22,6 +22,7 @@ struct FunctionDef {
 enum Flow {
     None,
     Return(Value),
+    Halt,
 }
 
 pub struct Interpreter {
@@ -130,7 +131,7 @@ impl Interpreter {
     pub fn run(&mut self, program: &[Stmt]) -> Result<(), String> {
         for stmt in program {
             match self.execute_stmt(stmt)? {
-                Flow::Return(_) => break,
+                Flow::Return(_) | Flow::Halt => break,
                 Flow::None => {}
             }
         }
@@ -142,7 +143,7 @@ impl Interpreter {
         let mut flow = Flow::None;
         for stmt in body {
             flow = self.execute_stmt(stmt)?;
-            if matches!(flow, Flow::Return(_)) {
+            if matches!(flow, Flow::Return(_) | Flow::Halt) {
                 break;
             }
         }
@@ -223,7 +224,7 @@ impl Interpreter {
                 let iterations = count as usize;
                 for _ in 0..iterations {
                     let flow = self.execute_block(body)?;
-                    if matches!(flow, Flow::Return(_)) {
+                    if matches!(flow, Flow::Return(_) | Flow::Halt) {
                         return Ok(flow);
                     }
                 }
@@ -233,7 +234,7 @@ impl Interpreter {
             Stmt::While { condition, body } => {
                 while self.eval_expr(condition)?.is_truthy() {
                     let flow = self.execute_block(body)?;
-                    if matches!(flow, Flow::Return(_)) {
+                    if matches!(flow, Flow::Return(_) | Flow::Halt) {
                         return Ok(flow);
                     }
                 }
@@ -258,8 +259,7 @@ impl Interpreter {
                         variable: name.clone(),
                         prompt: prompt_str,
                     });
-                    self.set_var(name.clone(), Value::Text(String::new()));
-                    Ok(Flow::None)
+                    Ok(Flow::Halt)
                 } else {
                     print!("{} ", prompt_str);
                     let _ = io::stdout().flush();
@@ -370,12 +370,12 @@ impl Interpreter {
                     let mut flow = Flow::None;
                     for s in body {
                         flow = self.execute_stmt(s)?;
-                        if matches!(flow, Flow::Return(_)) {
+                        if matches!(flow, Flow::Return(_) | Flow::Halt) {
                             break;
                         }
                     }
                     self.scopes.pop();
-                    if matches!(flow, Flow::Return(_)) {
+                    if matches!(flow, Flow::Return(_) | Flow::Halt) {
                         return Ok(flow);
                     }
                 }
@@ -397,12 +397,12 @@ impl Interpreter {
                     let mut flow = Flow::None;
                     for s in body {
                         flow = self.execute_stmt(s)?;
-                        if matches!(flow, Flow::Return(_)) {
+                        if matches!(flow, Flow::Return(_) | Flow::Halt) {
                             break;
                         }
                     }
                     self.scopes.pop();
-                    if matches!(flow, Flow::Return(_)) {
+                    if matches!(flow, Flow::Return(_) | Flow::Halt) {
                         return Ok(flow);
                     }
                 }
@@ -489,7 +489,7 @@ impl Interpreter {
 
                 for stmt in &program {
                     match self.execute_stmt(stmt)? {
-                        Flow::Return(_) => break,
+                        Flow::Return(_) | Flow::Halt => break,
                         Flow::None => {}
                     }
                 }
@@ -533,6 +533,7 @@ impl Interpreter {
                     return_val = v;
                     break;
                 }
+                Flow::Halt => return Ok(Value::Text(String::new())),
                 Flow::None => {}
             }
         }

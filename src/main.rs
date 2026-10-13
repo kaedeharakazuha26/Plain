@@ -478,4 +478,43 @@ say "Average is {average of scores}"
         assert!(res.is_err());
         assert!(res.err().unwrap().contains("file operations"));
     }
+
+    #[test]
+    fn ask_in_silent_mode_halts_and_resumes() {
+        let code = r#"
+ask name with "What is your name?"
+say "Hello, " + name
+"#;
+        // Pass 1: No input supplied yet
+        let res1 = plain_lang::inspect_source_with_inputs(code, &[]);
+        assert!(res1.waiting_for_input.is_some());
+        let ask = res1.waiting_for_input.unwrap();
+        assert_eq!(ask.variable, "name");
+        assert_eq!(ask.prompt, "What is your name?");
+        assert!(res1.output.is_empty(), "Should not execute 'say' before input is provided");
+
+        // Pass 2: User provides input
+        let res2 = plain_lang::inspect_source_with_inputs(code, &["jhomar".to_string()]);
+        assert_eq!(res2.waiting_for_input, None);
+        assert_eq!(res2.output, vec!["Hello, jhomar".to_string()]);
+
+        // Multi-prompt test
+        let multi_code = r#"
+ask first_name with "First name?"
+ask last_name with "Last name?"
+say "Full: " + first_name + " " + last_name
+"#;
+        let m1 = plain_lang::inspect_source_with_inputs(multi_code, &[]);
+        assert_eq!(m1.waiting_for_input.as_ref().map(|a| a.variable.as_str()), Some("first_name"));
+        assert!(m1.output.is_empty());
+
+        let m2 = plain_lang::inspect_source_with_inputs(multi_code, &["John".to_string()]);
+        assert_eq!(m2.waiting_for_input.as_ref().map(|a| a.variable.as_str()), Some("last_name"));
+        assert!(m2.output.is_empty());
+
+        let m3 = plain_lang::inspect_source_with_inputs(multi_code, &["John".to_string(), "Doe".to_string()]);
+        assert_eq!(m3.waiting_for_input, None);
+        assert_eq!(m3.output, vec!["Full: John Doe".to_string()]);
+    }
 }
+
