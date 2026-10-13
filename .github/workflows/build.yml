@@ -1,0 +1,133 @@
+name: Build Cross-Platform Plain IDE & CLI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    name: Run Plain Language Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Run Cargo Tests
+        run: cargo test --verbose
+
+  build:
+    name: Build (${{ matrix.platform }})
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'ubuntu-22.04'
+            name: 'linux-x86_64'
+            cli-bin: 'target/release/plain'
+            bundle-path: 'ide/src-tauri/target/release/bundle/'
+            args: ''
+
+          - platform: 'windows-latest'
+            name: 'windows-x86_64'
+            cli-bin: 'target/release/plain.exe'
+            bundle-path: 'ide/src-tauri/target/release/bundle/'
+            args: ''
+
+          - platform: 'macos-latest'
+            name: 'macos-arm64'
+            cli-bin: 'target/release/plain'
+            bundle-path: 'ide/src-tauri/target/release/bundle/'
+            args: ''
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Linux system dependencies (Ubuntu only)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: 'ide/package-lock.json'
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            . -> target
+            ide/src-tauri -> ide/src-tauri/target
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: ide
+
+      - name: Build Plain CLI binary
+        run: cargo build --release --bin plain
+
+      - name: Build Tauri Desktop IDE App
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: "./ide"
+          tagName: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || '' }}
+          releaseName: 'Plain v__VERSION__'
+          releaseBody: |
+            Release of Plain Language & IDE ${{ github.ref_name }}!
+            
+            ### Included Downloads:
+            - **Desktop IDE**: Installers for Linux (.deb, .AppImage), Windows (.msi, .exe setup), and macOS (.dmg).
+            - **CLI Binary**: Standalone `plain` compiler & interpreter binary for each OS.
+          releaseDraft: false
+          prerelease: false
+          args: ${{ matrix.args }}
+
+      - name: Upload Desktop App Bundles (CI Artifacts)
+        uses: actions/upload-artifact@v4
+        with:
+          name: plain-ide-${{ matrix.name }}
+          path: ${{ matrix.bundle-path }}
+          if-no-files-found: warn
+
+      - name: Upload Plain CLI Binary (CI Artifacts)
+        uses: actions/upload-artifact@v4
+        with:
+          name: plain-cli-${{ matrix.name }}
+          path: ${{ matrix.cli-bin }}
+          if-no-files-found: warn
