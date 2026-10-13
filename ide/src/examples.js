@@ -57,24 +57,21 @@ end
     id: 'ask_demo',
     title: 'Ask & User Input',
     category: 'v0.2 Features',
-    description: 'Ask user input and evaluate dynamic response',
+    description: 'Ask user input interactively in the terminal',
     code: `# Plain v0.2 — Interactive input demo
-# (When running in IDE, ask uses current input or prompt)
+# Type your answers directly into the terminal input prompt below!
 
-set name to "Jhomar"
-say "Hello, " + uppercase of name
+ask user_name with "What is your name?"
+say "Hello, " + uppercase of user_name + "!"
 
-set age to 18
+ask age with "How old are you?"
 if age is between 13 and 19
-    say "Status: Teenager"
+    say "You are a teenager!"
 otherwise if age is at least 20
-    say "Status: Adult"
+    say "You are an adult!"
 otherwise
-    say "Status: Kid"
+    say "You are a kid!"
 end
-
-set favorite_snack to "chocolate cookies"
-say "Favorite snack: " + uppercase of favorite_snack
 `
   },
   {
