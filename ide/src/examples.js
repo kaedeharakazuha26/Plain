@@ -1,9 +1,126 @@
 export const EXAMPLES = [
   {
+    id: 'features',
+    title: 'Plain v0.2 Syntax Tour',
+    category: 'v0.2 Features',
+    description: 'Complete tour of v0.2: functions, lists, helpers, and comparisons',
+    code: `# Plain v0.2 Syntax Tour
+
+# 1. Variables & Shortcuts
+set count to 10
+change count to 20
+increase count by 5
+decrease count by 3
+say "Count is now: " + count
+
+# 2. Functions with Parameters and Return
+define calculate_bonus with base_salary, multiplier
+    return base_salary multiplied by multiplier
+end
+
+set bonus to call calculate_bonus with 1000, 1.5
+say "Calculated bonus: $" + bonus
+
+# 3. Lists and Operations
+set scores to [85, 92, 78]
+add 95 to scores
+
+say "Scores list: " + scores
+say "Total scores count: " + length of scores
+say "First score: " + first of scores
+say "Last score: " + last of scores
+say "Second score: " + item 2 of scores
+
+say "--- All Scores ---"
+for each s in scores
+    say "Score: " + s
+end
+
+# 4. Text Helpers
+set user to "jhomar"
+say "Uppercase: " + uppercase of user
+say "Lowercase: " + lowercase of "HELLO WORLD"
+say "Username length: " + length of user
+
+# 5. English Comparisons & Chained Conditionals
+set age to 16
+if age is between 13 and 19
+    say "Age Category: Teenager"
+otherwise if age is at least 20
+    say "Age Category: Adult"
+otherwise
+    say "Age Category: Kid"
+end
+`
+  },
+  {
+    id: 'ask_demo',
+    title: 'Ask & User Input',
+    category: 'v0.2 Features',
+    description: 'Ask user input and evaluate dynamic response',
+    code: `# Plain v0.2 — Interactive input demo
+# (When running in IDE, ask uses current input or prompt)
+
+set name to "Jhomar"
+say "Hello, " + uppercase of name
+
+set age to 18
+if age is between 13 and 19
+    say "Status: Teenager"
+otherwise if age is at least 20
+    say "Status: Adult"
+otherwise
+    say "Status: Kid"
+end
+
+set favorite_snack to "chocolate cookies"
+say "Favorite snack: " + uppercase of favorite_snack
+`
+  },
+  {
+    id: 'functions_demo',
+    title: 'Functions & Scopes',
+    category: 'v0.2 Features',
+    description: 'Local function scopes, parameters, and return values',
+    code: `# Functions have their own local scope in v0.2!
+
+define greet with user_name
+    say "Welcome, " + uppercase of user_name + "!"
+end
+
+define sum_of with a, b
+    return a plus b
+end
+
+call greet with "Alex"
+set total to call sum_of with 42, 58
+say "Total sum: " + total
+`
+  },
+  {
+    id: 'lists_demo',
+    title: 'Lists & For Each Loop',
+    category: 'v0.2 Features',
+    description: 'Creating lists, appending with add, and looping with for each',
+    code: `# Lists in Plain v0.2
+set items to ["Laptop", "Mouse", "Keyboard"]
+add "Headphones" to items
+
+say "Shopping cart count: " + length of items
+say "First item: " + first of items
+say "Last item: " + last of items
+
+say "--- Items in Cart ---"
+for each product in items
+    say "Product: " + product
+end
+`
+  },
+  {
     id: 'hello',
-    title: 'Hello & Welcome',
+    title: 'Hello & Welcome (v0.1)',
     category: 'Basics',
-    description: 'Basic variable assignment, text concatenation, and conditionals',
+    description: 'Original v0.1 basic syntax (still fully supported in v0.2)',
     code: `# Welcome to Plain!
 # Plain lets you write code that reads like basic English sentences.
 
@@ -42,82 +159,6 @@ if subtotal is at least 300 and quantity is above 2
 otherwise
     say "Standard price: $" + subtotal
 end
-`
-  },
-  {
-    id: 'repeat_loop',
-    title: 'Repeat Loop (Counting)',
-    category: 'Loops',
-    description: 'Clean English repeat loops',
-    code: `# Repeat something a fixed number of times
-set steps to 4
-set counter to 0
-
-say "Initiating countdown sequence..."
-
-repeat steps times
-    set counter to counter + 1
-    say "Step #" + counter + " completed successfully."
-end
-
-say "All steps finished!"
-`
-  },
-  {
-    id: 'while_loop',
-    title: 'While Loop (Countdown)',
-    category: 'Loops',
-    description: 'While loop with built-in 1,000,000 iteration safety guard',
-    code: `# While loop with safety guard
-set energy to 5
-
-while energy is above 0
-    say "Current energy level: " + energy + " / 5"
-    set energy to energy - 1
-end
-
-say "Battery depleted! Recharging now."
-`
-  },
-  {
-    id: 'english_comparisons',
-    title: 'English Comparisons',
-    category: 'Expressions',
-    description: 'Showcase of natural English phrasing: is above, is below, is at least, is equal to',
-    code: `# Plain supports natural English comparison phrases:
-# 'is above', 'is below', 'is at least', 'is at most', 'is equal to', 'is not equal to'
-
-set score to 85
-
-if score is at least 90
-    say "Grade: Outstanding (A)"
-otherwise
-    if score is at least 80
-        say "Grade: Very Good (B)"
-    otherwise
-        say "Grade: Needs improvement"
-    end
-end
-
-set role to "admin"
-if role is equal to "admin"
-    say "Access granted to admin console"
-end
-`
-  },
-  {
-    id: 'error_handling',
-    title: 'Error Diagnostics Demo',
-    category: 'Testing & Errors',
-    description: 'Demonstrates helpful English compiler error messages',
-    code: `# This example triggers helpful error messages
-# Try uncommenting each line to see how Plain reports errors!
-
-# 1. Division by zero:
-# set result to 100 / 0
-
-# 2. Unknown variable with suggestion:
-say missing_variable
 `
   }
 ];

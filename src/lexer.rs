@@ -30,6 +30,38 @@ pub enum TokenKind {
     True,
     False,
 
+    // v0.2 keywords
+    Ask,
+    With,
+    Define,
+    Return,
+    Call,
+    Add,
+    For,
+    Each,
+    In,
+    Change,
+    Increase,
+    Decrease,
+    By,
+    Between,
+    Greater,
+    Less,
+    Than,
+    Different,
+    From,
+    Same,
+    As,
+    Of,
+    Uppercase,
+    Lowercase,
+    Length,
+    First,
+    Last,
+    Item,
+    Multiplied,
+    Divided,
+
     // symbols
     Plus,
     Minus,
@@ -37,6 +69,9 @@ pub enum TokenKind {
     Slash,
     LParen,
     RParen,
+    LBracket,
+    RBracket,
+    Comma,
     Gt,
     Lt,
     Ge,
@@ -114,6 +149,10 @@ pub fn tokenize(source: &str) -> Result<Vec<Token>, String> {
             '/' => { tokens.push(Token { kind: TokenKind::Slash, line }); i += 1; }
             '(' => { tokens.push(Token { kind: TokenKind::LParen, line }); i += 1; }
             ')' => { tokens.push(Token { kind: TokenKind::RParen, line }); i += 1; }
+            '[' => { tokens.push(Token { kind: TokenKind::LBracket, line }); i += 1; }
+            ']' => { tokens.push(Token { kind: TokenKind::RBracket, line }); i += 1; }
+            ',' => { tokens.push(Token { kind: TokenKind::Comma, line }); i += 1; }
+
             '>' => {
                 if i + 1 < chars.len() && chars[i + 1] == '=' {
                     tokens.push(Token { kind: TokenKind::Ge, line });
@@ -137,7 +176,6 @@ pub fn tokenize(source: &str) -> Result<Vec<Token>, String> {
                     tokens.push(Token { kind: TokenKind::EqEq, line });
                     i += 2;
                 } else {
-                    // a single '=' also reads as "equal to"
                     tokens.push(Token { kind: TokenKind::EqEq, line });
                     i += 1;
                 }
@@ -180,6 +218,41 @@ pub fn tokenize(source: &str) -> Result<Vec<Token>, String> {
                     "or" => TokenKind::Or,
                     "true" => TokenKind::True,
                     "false" => TokenKind::False,
+
+                    // v0.2 keywords
+                    "ask" => TokenKind::Ask,
+                    "with" => TokenKind::With,
+                    "define" => TokenKind::Define,
+                    "return" => TokenKind::Return,
+                    "call" => TokenKind::Call,
+                    "add" => TokenKind::Add,
+                    "for" => TokenKind::For,
+                    "each" => TokenKind::Each,
+                    "in" => TokenKind::In,
+                    "change" => TokenKind::Change,
+                    "increase" => TokenKind::Increase,
+                    "decrease" => TokenKind::Decrease,
+                    "by" => TokenKind::By,
+                    "between" => TokenKind::Between,
+                    "greater" => TokenKind::Greater,
+                    "less" => TokenKind::Less,
+                    "than" => TokenKind::Than,
+                    "different" => TokenKind::Different,
+                    "from" => TokenKind::From,
+                    "same" => TokenKind::Same,
+                    "as" => TokenKind::As,
+                    "of" => TokenKind::Of,
+                    "uppercase" => TokenKind::Uppercase,
+                    "lowercase" => TokenKind::Lowercase,
+                    "length" => TokenKind::Length,
+                    "first" => TokenKind::First,
+                    "last" => TokenKind::Last,
+                    "item" => TokenKind::Item,
+                    "plus" => TokenKind::Plus,
+                    "minus" => TokenKind::Minus,
+                    "multiplied" => TokenKind::Multiplied,
+                    "divided" => TokenKind::Divided,
+
                     _ => TokenKind::Ident(word),
                 };
                 tokens.push(Token { kind, line });

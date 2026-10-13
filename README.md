@@ -1,47 +1,61 @@
-# Plain — a tiny English-like language, in Rust (v0.1)
+# Plain — a tiny English-like language, in Rust (v0.2)
 
 You write basic English. A Rust program (the interpreter) reads it and runs it.
 
 ```
 set name to "jhomar"
-set age to 20
+ask age with "How old are you?"
 
-say "Hello, " + name
-
-if age is above 18
-    say "You are an adult"
-otherwise
-    say "You are a minor"
+define greet with name
+    say "Hello, " + uppercase of name
 end
 
-repeat 3 times
-    say "Hi"
+call greet with name
+
+set scores to [80, 90, 75]
+add 100 to scores
+
+for each score in scores
+    say score
+end
+
+if age is between 13 and 19
+    say "teenager"
+otherwise if age is at least 20
+    say "adult"
+otherwise
+    say "kid"
 end
 ```
 
 ## Run it
 
 ```bash
-cargo run                        # runs the built-in demo
-cargo run -- examples/hello.plain
-cargo test                       # pipeline tests
+cargo run                            # built-in demo
+cargo run -- examples/hello.plain    # v0.1 syntax (still works)
+cargo run -- examples/features.plain # v0.2 syntax tour
+cargo run -- examples/ask.plain      # input demo (type answers)
+cargo test                           # 6 tests
 ```
 
-## Frontend IDE
+## Frontend IDE (VS Code & Desktop App)
 
-Test and write Plain code visually with a modern
+Test and write Plain code visually with a modern VS Code-style IDE and desktop application:
 
 ```bash
-npm run ide                      # starts the IDE on http://localhost:5173
+# In your browser:
+npm run ide                          # starts on http://localhost:5173
 # or run the startup script:
 ./start-ide.sh
+
+# Or as a native Desktop App (Tauri):
+npm run tauri:dev
 ```
 
 - **File Explorer (Left)**: Browse example `.plain` files, create and edit custom files.
-- **Code Editor (Center)**: Syntax highlighting for Plain English, line numbers, error indicators.
+- **Code Editor (Center)**: Syntax highlighting for Plain English v0.2, line numbers, error indicators.
 - **Terminal & Inspector (Bottom Dock)**: Live stdout output, AST tree breakdown, lexer tokens, memory variables.
 - **English Assistant (Right)**: 1-click sentence builder snippets & grammar cheat sheet.
-
 
 ## How it works
 
@@ -52,41 +66,70 @@ lexer.rs        text  -> tokens        set | name | to | "jhomar"
       ↓
 parser.rs       tokens -> AST tree     Set { name, value }
       ↓
-interpreter.rs  walks the tree and executes it (variables in a HashMap)
+interpreter.rs  walks the tree and executes it (variables in a HashMap,
+                functions in a second HashMap, `return` bubbles up as a value)
 ```
 
-| File | Job |
-|---|---|
-| `src/lexer.rs` | chops sentences into tokens, tracks line numbers |
-| `src/ast.rs` | `Value` (number / text / true-false), `Expr`, `Stmt` types |
-| `src/parser.rs` | grammar: statements + expression precedence |
-| `src/interpreter.rs` | executes the AST, holds variables |
-| `src/main.rs` | reads a file (or runs the demo), wires it all together |
+## Syntax
 
-## Language in v0.1
-
-- `set x to <expr>` — create/change a variable
+**Basics**
+- `set x to <expr>` / `change x to <expr>` — create/change a variable
 - `say <expr>` — print
-- `if <expr> ... otherwise ... end` — `otherwise` is optional, `then` is optional
+- `# comment`
+
+**Input (new in v0.2)**
+- `ask name with "What is your name?"` — prints the prompt, reads a line.
+  If the user types a number it is stored as a number, else as text.
+
+**Functions (new in v0.2)**
+```
+define sum_of with a, b
+    return a plus b
+end
+set total to call sum_of with 5, 3
+call greet with "jhomar"        # as a statement, result ignored
+```
+Params are comma-separated after `with`. Function bodies get their own
+scope (they can read outer variables; their changes don't leak out).
+Names can't be keywords — you can't name a function `add` or a variable
+`say`, those words are reserved.
+
+**Lists (new in v0.2)**
+- `set scores to [80, 90, 75]`
+- `add 100 to scores` — appends (on a number it adds, on text it joins)
+- `for each score in scores ... end`
+- `length of scores`, `first of scores`, `last of scores`,
+  `item 2 of scores` (counting starts at 1, like English)
+
+**Control flow**
+- `if <expr> ... otherwise if <expr> ... otherwise ... end` (`then` optional)
 - `repeat <expr> times ... end`
-- `while <expr> ... end` (with a 1,000,000-iteration safety stop)
-- Values: numbers (`20`, `3.5`), text (`"hello"`), `true` / `false`
-- Math: `+ - * / ( )` — `+` also joins text: `"Total: " + total`
-- English comparisons: `is above`, `is below`, `is at least`, `is at most`,
-  `is equal to`, `is not equal to`, plain `is` (= equals)
-  — symbols `> < >= <= == !=` work too
-- Logic: `and`, `or`, `not`
-- Comments: `# anything after this is ignored`
+- `while <expr> ... end` (1,000,000-iteration safety stop)
+
+**Variable shortcuts (new in v0.2)**
+- `increase lives` / `increase lives by 2` / `decrease lives by 1`
+
+**Values & math**
+- Numbers, text `"..."`, `true` / `false`, lists
+- `+ - * / ( )`, word forms: `plus`, `minus`, `multiplied by`, `divided by`
+- `+` also joins text and lists
+
+**Comparisons (plain English)**
+`is above`, `is below`, `is greater than`, `is less than`, `is at least`,
+`is at most`, `is equal to`, `is not equal to`, `is different from`,
+`is same as`, `is between 13 and 19`, plain `is` — plus symbols
+`> < >= <= == !=`, and logic `and` / `or` / `not`
+
+**Text helpers (new in v0.2)**
+`uppercase of name`, `lowercase of name`, `length of name`
 
 Errors are plain messages with line numbers, e.g.
 `Unknown name 'foo' (did you forget: set foo to ...?)`
 
-## Ideas for v0.2
+## Ideas for v0.3
 
-- `ask name with "What is your name?"` — read input
-- lists: `set items to 1, 2, 3`
-- functions in English: `define greet with name ... end`
+- text tools: `contains`, splitting/joining text
+- `remove ... from <list>`, sorting
+- dictionaries in English: `set person to name "Ana", age 20`
+- reading/writing files
 - transpiling to Rust instead of interpreting (a real compiler back-end)
-
-Working name is **Plain** — rename the folder / `Cargo.toml` name anytime,
-it's just a placeholder.

@@ -5,14 +5,26 @@ use std::process::ExitCode;
 const DEMO: &str = r#"
 set name to "jhomar"
 set age to 20
-say "Hello, " + name
-if age is above 18
-    say "You are an adult"
-otherwise
-    say "You are a minor"
+
+define greet with name
+    say "Hello, " + uppercase of name
 end
-repeat 3 times
-    say "Hi"
+
+call greet with name
+
+set scores to [80, 90, 75]
+add 100 to scores
+
+for each score in scores
+    say score
+end
+
+if age is between 13 and 19
+    say "teenager"
+otherwise if age is at least 20
+    say "adult"
+otherwise
+    say "kid"
 end
 "#;
 
@@ -142,5 +154,56 @@ mod tests {
     #[test]
     fn division_by_zero_is_an_error() {
         assert!(run_source("say 1 / 0\n").is_err());
+    }
+
+    #[test]
+    fn functions_and_return_work() {
+        let src = r#"
+define add_nums with a, b
+    return a plus b
+end
+set ans to call add_nums with 10, 20
+if ans is 30
+    say "ok"
+otherwise
+    say 1 / 0
+end
+"#;
+        assert!(run_source(src).is_ok());
+    }
+
+    #[test]
+    fn lists_and_for_each_work() {
+        let src = r#"
+set nums to [1, 2, 3]
+add 4 to nums
+set sum to 0
+for each n in nums
+    set sum to sum + n
+end
+if sum is 10
+    say "sum ok"
+otherwise
+    say 1 / 0
+end
+"#;
+        assert!(run_source(src).is_ok());
+    }
+
+    #[test]
+    fn text_helpers_and_comparisons_work() {
+        let src = r#"
+set word to "rust"
+if uppercase of word is "RUST" and length of word is 4
+    say "text ok"
+end
+set val to 15
+if val is between 10 and 20
+    say "between ok"
+otherwise
+    say 1 / 0
+end
+"#;
+        assert!(run_source(src).is_ok());
     }
 }

@@ -5,15 +5,19 @@ export default function SentenceBar({ onInsert }) {
   const templates = [
     { label: 'set variable', code: 'set variable_name to 10\n', kw: 'set' },
     { label: 'say text', code: 'say "Hello, Plain!"\n', kw: 'say' },
-    { label: 'if condition', code: 'if x is above 10\n    say "Large"\notherwise\n    say "Small"\nend\n', kw: 'if' },
-    { label: 'repeat loop', code: 'repeat 3 times\n    say "Looping..."\nend\n', kw: 'repeat' },
-    { label: 'while loop', code: 'while counter is below 5\n    set counter to counter + 1\nend\n', kw: 'while' },
-    { label: 'is at least', code: 'if score is at least 50\n    say "Passed"\nend\n', kw: 'is at least' }
+    { label: 'define function', code: 'define greet with name\n    say "Hello, " + uppercase of name\nend\n', kw: 'define' },
+    { label: 'call function', code: 'set result to call add_nums with 5, 10\n', kw: 'call' },
+    { label: 'set list', code: 'set scores to [80, 90, 75]\n', kw: 'list' },
+    { label: 'add to list', code: 'add 100 to scores\n', kw: 'add' },
+    { label: 'for each loop', code: 'for each item in scores\n    say item\nend\n', kw: 'for each' },
+    { label: 'if otherwise if', code: 'if age is between 13 and 19\n    say "teenager"\notherwise if age is at least 20\n    say "adult"\notherwise\n    say "kid"\nend\n', kw: 'if' },
+    { label: 'increase variable', code: 'increase score by 10\n', kw: 'increase' },
+    { label: 'ask user input', code: 'ask user_name with "What is your name?"\n', kw: 'ask' }
   ];
 
   return (
     <div className="sentence-bar">
-      <span className="sentence-bar-label">Sentence Snippets:</span>
+      <span className="sentence-bar-label">v0.2 Sentence Snippets:</span>
       {templates.map((tpl, idx) => (
         <button
           key={idx}

@@ -1,0 +1,53 @@
+# Plain v0.2 Syntax Tour — examples/features.plain
+
+# 1. Variables & Shortcuts
+set count to 10
+change count to 20
+increase count by 5
+decrease count by 3
+say "Count is now: " + count
+
+# 2. Functions with Parameters and Return
+define calculate_bonus with base_salary, multiplier
+    return base_salary multiplied by multiplier
+end
+
+set bonus to call calculate_bonus with 1000, 1.5
+say "Calculated bonus: $" + bonus
+
+# 3. Lists and Operations
+set scores to [85, 92, 78]
+add 95 to scores
+
+say "Scores list: " + scores
+say "Total scores count: " + length of scores
+say "First score: " + first of scores
+say "Last score: " + last of scores
+say "Second score: " + item 2 of scores
+
+say "--- All Scores ---"
+for each s in scores
+    say "Score: " + s
+end
+
+# 4. Text Helpers
+set user to "jhomar"
+say "Uppercase: " + uppercase of user
+say "Lowercase: " + lowercase of "HELLO WORLD"
+say "Username length: " + length of user
+
+# 5. English Math & Comparisons
+set age to 16
+if age is between 13 and 19
+    say "Age Category: Teenager"
+otherwise if age is at least 20
+    say "Age Category: Adult"
+otherwise
+    say "Age Category: Kid"
+end
+
+set a to 10
+set b to 5
+if a is greater than b and a is different from b
+    say "Comparison passed: 10 > 5 and 10 != 5"
+end

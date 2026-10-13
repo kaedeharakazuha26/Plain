@@ -1,8 +1,15 @@
 import React, { useRef, useEffect } from 'react';
 
-// Plain syntax keywords, operators, and literals
-const KEYWORDS = new Set(['set', 'say', 'if', 'then', 'otherwise', 'else', 'end', 'repeat', 'times', 'while', 'to']);
-const ENGLISH_OPS = new Set(['is', 'above', 'below', 'equal', 'at', 'least', 'most', 'not', 'and', 'or']);
+const KEYWORDS = new Set([
+  'set', 'say', 'if', 'then', 'otherwise', 'else', 'end', 'repeat', 'times', 'while', 'to',
+  'ask', 'with', 'define', 'return', 'call', 'add', 'for', 'each', 'in', 'change',
+  'increase', 'decrease', 'by', 'of', 'uppercase', 'lowercase', 'length', 'first', 'last', 'item'
+]);
+const ENGLISH_OPS = new Set([
+  'is', 'above', 'below', 'equal', 'at', 'least', 'most', 'not', 'and', 'or',
+  'between', 'greater', 'less', 'than', 'different', 'from', 'same', 'as',
+  'plus', 'minus', 'multiplied', 'divided'
+]);
 const BOOLEANS = new Set(['true', 'false']);
 
 function highlightPlainCode(code) {

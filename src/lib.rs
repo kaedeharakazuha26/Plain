@@ -48,21 +48,25 @@ pub fn inspect_source(source: &str) -> InspectResult {
     };
 
     let mut interpreter = Interpreter::new_silent();
-    match interpreter.run(&program) {
+    let run_res = interpreter.run(&program);
+    let variables = interpreter.get_vars();
+    let output = interpreter.output;
+
+    match run_res {
         Ok(()) => InspectResult {
             success: true,
-            output: interpreter.output,
+            output,
             tokens: Some(tokens),
             ast: Some(program),
-            variables: interpreter.vars,
+            variables,
             error: None,
         },
         Err(e) => InspectResult {
             success: false,
-            output: interpreter.output,
+            output,
             tokens: Some(tokens),
             ast: Some(program),
-            variables: interpreter.vars,
+            variables,
             error: Some(e),
         },
     }
