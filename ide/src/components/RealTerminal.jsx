@@ -15,7 +15,8 @@ export default function RealTerminal({
   activeFile,
   activeCode,
   files = [],
-  onFileSelect
+  onFileSelect,
+  onFileDelete
 }) {
   const terminalRef = useRef(null);
   const xtermInstance = useRef(null);
@@ -30,13 +31,31 @@ export default function RealTerminal({
   const PROMPT = '\x1b[1;36mplain@ide\x1b[0m:\x1b[1;32m~/workspace\x1b[0m$ ';
 
   // Execute command on backend (Tauri or HTTP API)
-  const executeShellCommand = async (fullCommand, stdin = null) => {
+  const executeShellCommand = async (fullCommand, stdin = null, customFile = null) => {
     const parts = fullCommand.trim().split(/\s+/);
     const cmd = parts[0];
     const args = parts.slice(1);
+    const cleanCmd = cmd.replace(/^\.\//, '');
 
-    // Sync active file content to disk / server if running current file
-    const syncFile = activeFile ? { name: activeFile.name, content: activeCode } : null;
+    // Sync file content to disk so the Plain binary can read it
+    let fileToSync = customFile;
+    if (!fileToSync) {
+      if ((cmd === 'plain' || cleanCmd === 'plain') && args[0]) {
+        const targetArg = args[0].replace(/^\.\//, '');
+        fileToSync = files.find(f => f.name === targetArg || f.id === targetArg);
+      } else if (cleanCmd.endsWith('.plain')) {
+        fileToSync = files.find(f => f.name === cleanCmd || f.id === cleanCmd);
+      }
+    }
+    if (!fileToSync && activeFile) {
+      fileToSync = activeFile;
+    }
+
+    const contentToWrite = fileToSync
+      ? (fileToSync.id === activeFile?.id && activeCode !== undefined ? activeCode : fileToSync.code)
+      : null;
+
+    const syncFile = fileToSync ? { name: fileToSync.name, content: contentToWrite } : null;
 
     // 1. Try Tauri if in desktop app
     if (typeof window !== 'undefined' && window.__TAURI_INTERNALS__) {
@@ -46,7 +65,8 @@ export default function RealTerminal({
           command: cmd,
           args,
           cwd: null,
-          stdinData: stdin
+          stdinData: stdin,
+          syncFile: syncFile
         });
         return {
           stdout: res.stdout || '',
@@ -242,6 +262,7 @@ export default function RealTerminal({
       term.writeln('  \x1b[36mplain -c "<code>"\x1b[0m       Execute a single Plain line or block');
       term.writeln('  \x1b[36mls\x1b[0m                      List files in workspace');
       term.writeln('  \x1b[36mcat <filename.plain>\x1b[0m    Print file contents to terminal');
+      term.writeln('  \x1b[36mrm <filename.plain>\x1b[0m     Delete file from workspace and disk');
       term.writeln('  \x1b[36mpwd\x1b[0m                     Print current working directory');
       term.writeln('  \x1b[36mclear\x1b[0m                   Clear terminal screen');
       term.writeln('  \x1b[36m<shell command>\x1b[0m         Run any Linux/shell command directly');
@@ -252,7 +273,6 @@ export default function RealTerminal({
     }
 
     if (cmd === 'ls') {
-      // List workspace files
       term.writeln('\x1b[1;34mWorkspace files:\x1b[0m');
       files.forEach(f => {
         term.writeln(`  \x1b[32m${f.name}\x1b[0m`);
@@ -264,7 +284,7 @@ export default function RealTerminal({
     }
 
     if (cmd === 'cat') {
-      const targetName = args[0];
+      const targetName = args[0] ? args[0].replace(/^\.\//, '') : '';
       const target = files.find(f => f.name === targetName || f.id === targetName);
       if (target) {
         term.writeln(target.code);
@@ -277,12 +297,31 @@ export default function RealTerminal({
       return;
     }
 
-    if (cmd.endsWith('.plain')) {
-      const targetFile = files.find(f => f.name === cmd || f.id === cmd) || activeFile;
-      const fileName = targetFile ? targetFile.name : cmd;
+    if (cmd === 'rm' || cmd === 'delete') {
+      const targetName = args[0] ? args[0].replace(/^\.\//, '') : '';
+      const target = files.find(f => f.name === targetName || f.id === targetName);
+      if (target) {
+        term.writeln(`\x1b[33mDeleting ${target.name}...\x1b[0m`);
+        if (onFileDelete) {
+          onFileDelete(target.id);
+        }
+        await executeShellCommand(`rm ${target.name}`);
+        term.writeln(`\x1b[32mSuccessfully deleted ${target.name}\x1b[0m\r\n`);
+      } else {
+        term.writeln(`\x1b[31mrm: cannot remove '${targetName || ''}': No such file\x1b[0m\r\n`);
+      }
+      term.write(PROMPT);
+      isRunningRef.current = false;
+      return;
+    }
+
+    const cleanCommand = cmd.replace(/^\.\//, '');
+    if (cleanCommand.endsWith('.plain')) {
+      const targetFile = files.find(f => f.name === cleanCommand || f.id === cleanCommand) || activeFile;
+      const fileName = targetFile ? targetFile.name : cleanCommand;
       term.writeln(`\x1b[36mRunning ${fileName} with Plain interpreter...\x1b[0m`);
 
-      const res = await executeShellCommand(`plain ${fileName}`);
+      const res = await executeShellCommand(`plain ${fileName}`, null, targetFile);
       if (res.stdout) {
         const formatted = res.stdout.replace(/\r?\n/g, '\r\n');
         term.write(formatted);
@@ -306,10 +345,11 @@ export default function RealTerminal({
         return;
       }
 
+      const targetFile = files.find(f => f.name === targetName || f.id === targetName) || activeFile;
       term.writeln(`\x1b[36mRunning ${targetName} with Plain interpreter...\x1b[0m`);
 
-      // Run via executeShellCommand
-      const res = await executeShellCommand(`plain ${targetName}`);
+      // Run via executeShellCommand with target file synced
+      const res = await executeShellCommand(`plain ${targetName}`, null, targetFile);
       if (res.stdout) {
         // Output lines with proper carriage returns
         const formatted = res.stdout.replace(/\r?\n/g, '\r\n');
@@ -320,6 +360,26 @@ export default function RealTerminal({
       }
 
       term.writeln(`\r\n\x1b[90m[Process finished with exit code ${res.code}]\x1b[0m\r\n`);
+      term.write(PROMPT);
+      isRunningRef.current = false;
+      return;
+    }
+
+    if (cmd === 'plain') {
+      const targetName = args[0];
+      const targetFile = files.find(f => f.name === targetName || f.id === targetName) || activeFile;
+      try {
+        const res = await executeShellCommand(cmdLine, null, targetFile);
+        if (res.stdout) {
+          term.write(res.stdout.replace(/\r?\n/g, '\r\n'));
+        }
+        if (res.stderr) {
+          term.write(`\x1b[31m${res.stderr.replace(/\r?\n/g, '\r\n')}\x1b[0m`);
+        }
+      } catch (err) {
+        term.writeln(`\x1b[31mError: ${err.message}\x1b[0m`);
+      }
+      term.writeln('');
       term.write(PROMPT);
       isRunningRef.current = false;
       return;

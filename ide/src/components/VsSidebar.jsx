@@ -176,18 +176,18 @@ export default function VsSidebar({
                   <FileCode size={14} color="#34d399" />
                   <span>{file.name}</span>
                 </div>
-                {onDeleteFile && files.length > 1 && (
+                {onDeleteFile && (
                   <button
-                    className="tab-close-btn"
+                    className="file-delete-btn"
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (window.confirm(`Delete ${file.name}?`)) {
+                      if (window.confirm(`Delete "${file.name}" from workspace and disk?`)) {
                         onDeleteFile(file.id);
                       }
                     }}
                     title={`Delete ${file.name}`}
                   >
-                    <Trash2 size={12} color="var(--accent-rose)" />
+                    <Trash2 size={13} color="var(--accent-rose)" />
                   </button>
                 )}
               </div>

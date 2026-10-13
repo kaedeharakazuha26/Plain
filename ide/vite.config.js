@@ -98,6 +98,89 @@ function plainLanguagePlugin() {
           return;
         }
 
+        if (req.method === 'POST' && req.url === '/api/terminal/delete') {
+          let body = '';
+          req.on('data', chunk => { body += chunk; });
+          req.on('end', async () => {
+            let payload = {};
+            try { payload = JSON.parse(body); } catch {}
+            const { filename } = payload;
+            const workspaceDir = path.resolve(__dirname, '..');
+            if (filename) {
+              try {
+                const fs = await import('fs');
+                const filePath = path.resolve(workspaceDir, filename);
+                if (fs.existsSync(filePath)) {
+                  fs.unlinkSync(filePath);
+                }
+              } catch (e) {
+                console.warn('Failed to delete file:', e);
+              }
+            }
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ success: true }));
+          });
+          return;
+        }
+
+        if (req.method === 'POST' && req.url === '/api/terminal/save-as') {
+          let body = '';
+          req.on('data', chunk => { body += chunk; });
+          req.on('end', async () => {
+            let payload = {};
+            try { payload = JSON.parse(body); } catch {}
+            const { suggestedName = 'untitled.plain', content = '' } = payload;
+            const workspaceDir = path.resolve(__dirname, '..');
+            const defaultPath = path.resolve(workspaceDir, suggestedName);
+
+            // Try zenity on Linux for native Save As dialog
+            const zenity = spawn('zenity', [
+              '--file-selection',
+              '--save',
+              '--confirm-overwrite',
+              '--title=Save Plain Language File As',
+              `--filename=${defaultPath}`,
+              '--file-filter=Plain files (*.plain) | *.plain',
+              '--file-filter=All files | *'
+            ]);
+
+            let outPath = '';
+            zenity.stdout.on('data', d => { outPath += d.toString(); });
+
+            zenity.on('close', async (code) => {
+              const selected = outPath.trim();
+              if (code === 0 && selected) {
+                let finalPath = selected;
+                if (!path.extname(finalPath)) finalPath += '.plain';
+                try {
+                  const fs = await import('fs');
+                  fs.writeFileSync(finalPath, content, 'utf8');
+                  res.setHeader('Content-Type', 'application/json');
+                  res.end(JSON.stringify({
+                    success: true,
+                    name: path.basename(finalPath),
+                    path: finalPath,
+                    content
+                  }));
+                  return;
+                } catch (err) {
+                  res.setHeader('Content-Type', 'application/json');
+                  res.end(JSON.stringify({ error: err.message }));
+                  return;
+                }
+              }
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ cancelled: true }));
+            });
+
+            zenity.on('error', () => {
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ unsupported: true }));
+            });
+          });
+          return;
+        }
+
         if (req.method === 'POST' && req.url === '/api/run') {
           let body = '';
           req.on('data', chunk => {

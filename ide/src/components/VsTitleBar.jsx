@@ -11,6 +11,7 @@ import {
   Folder,
   Save,
   X,
+  Trash2,
   Cpu
 } from 'lucide-react';
 
@@ -32,6 +33,7 @@ export default function VsTitleBar({
   onSaveFile,
   onSaveAs,
   onCloseFile,
+  onDeleteFile,
   folderName = 'workspace'
 }) {
   const [fileMenuOpen, setFileMenuOpen] = useState(false);
@@ -146,6 +148,22 @@ export default function VsTitleBar({
                   <span>Close File Tab</span>
                   <span className="dropdown-shortcut">Ctrl+W</span>
                 </button>
+
+                {onDeleteFile && activeFile && (
+                  <button
+                    className="dropdown-menu-item"
+                    onClick={() => {
+                      setFileMenuOpen(false);
+                      if (window.confirm(`Are you sure you want to delete ${activeFile.name}?`)) {
+                        onDeleteFile(activeFile.id);
+                      }
+                    }}
+                    style={{ color: 'var(--accent-rose)' }}
+                  >
+                    <Trash2 size={13} color="var(--accent-rose)" />
+                    <span>Delete File</span>
+                  </button>
+                )}
               </div>
             )}
           </div>

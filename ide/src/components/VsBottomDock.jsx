@@ -31,7 +31,8 @@ export default function VsBottomDock({
   activeFile,
   activeCode,
   files,
-  onSelectFile
+  onSelectFile,
+  onDeleteFile
 }) {
   const isExpanded = dockHeight > 250;
 
@@ -135,6 +136,7 @@ export default function VsBottomDock({
             activeCode={activeCode}
             files={files}
             onFileSelect={onSelectFile}
+            onFileDelete={onDeleteFile}
           />
         )}
 

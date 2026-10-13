@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileCode, X, Plus, ChevronRight } from 'lucide-react';
+import { FileCode, X, Plus, ChevronRight, Trash2 } from 'lucide-react';
 
 export default function VsEditorTabs({
   files,
@@ -7,7 +7,8 @@ export default function VsEditorTabs({
   activeFileId,
   onSelectFile,
   onCloseFile,
-  onNewFile
+  onNewFile,
+  onDeleteFile
 }) {
   const openFiles = files.filter(f => openFileIds.includes(f.id));
   const activeFile = files.find(f => f.id === activeFileId);
@@ -57,6 +58,21 @@ export default function VsEditorTabs({
         <span style={{ color: 'var(--text-main)', fontWeight: 500 }}>
           {activeFile?.name || 'Untitled.plain'}
         </span>
+
+        {activeFile && onDeleteFile && (
+          <button
+            className="breadcrumb-delete-btn"
+            onClick={() => {
+              if (window.confirm(`Delete "${activeFile.name}" from workspace and disk?`)) {
+                onDeleteFile(activeFile.id);
+              }
+            }}
+            title={`Delete ${activeFile.name}`}
+          >
+            <Trash2 size={12} color="var(--accent-rose)" />
+            <span>Delete</span>
+          </button>
+        )}
       </div>
     </>
   );

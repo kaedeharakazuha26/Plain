@@ -417,6 +417,31 @@ body {
   color: var(--accent-cyan);
 }
 
+.file-delete-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 3px 5px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dim);
+  opacity: 0.6;
+  transition: all 0.15s ease;
+  margin-left: auto;
+}
+.file-tree-item:hover .file-delete-btn,
+.file-tree-item.active .file-delete-btn {
+  opacity: 1;
+}
+.file-delete-btn:hover {
+  background: rgba(244, 63, 94, 0.2);
+  color: var(--accent-rose);
+  opacity: 1;
+  transform: scale(1.1);
+}
+
 /* 5. CENTER WORKSPACE (TABS + EDITOR + BOTTOM TERMINAL DOCK) */
 .vs-center-col {
   flex: 1;
@@ -502,6 +527,26 @@ body {
   color: var(--text-dim);
   background-color: var(--vscode-bg-editor);
   border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.breadcrumb-delete-btn {
+  margin-left: auto;
+  background: transparent;
+  border: 1px solid rgba(244, 63, 94, 0.25);
+  color: var(--accent-rose);
+  padding: 1px 8px;
+  border-radius: 3px;
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.breadcrumb-delete-btn:hover {
+  background: rgba(244, 63, 94, 0.15);
+  border-color: var(--accent-rose);
+  transform: translateY(-1px);
 }
 
 /* Editor Container */

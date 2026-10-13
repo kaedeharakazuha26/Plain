@@ -327,7 +327,62 @@ export default function App() {
   };
 
   // 2. Open File...
-  const handleOpenFile = () => {
+  const handleOpenFile = async () => {
+    // 1. Try native Tauri dialog
+    if (typeof window !== 'undefined' && window.__TAURI_INTERNALS__) {
+      try {
+        const { invoke } = await import('@tauri-apps/api/core');
+        const opened = await invoke('open_file_dialog');
+        if (opened) {
+          const newId = opened.name.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+          const newFile = {
+            id: newId,
+            name: opened.name,
+            path: opened.path,
+            code: opened.content,
+            category: 'workspace'
+          };
+          setFiles(prev => [...prev.filter(f => f.id !== newId), newFile]);
+          setActiveFileId(newId);
+          setOpenFileIds(prev => Array.from(new Set([...prev, newId])));
+          executeCode(opened.content, []);
+          return;
+        }
+        return;
+      } catch (err) {
+        console.warn('Tauri open_file_dialog error:', err);
+      }
+    }
+
+    // 2. Try browser File System Access API
+    if ('showOpenFilePicker' in window) {
+      try {
+        const [handle] = await window.showOpenFilePicker({
+          types: [{
+            description: 'Plain Language File (*.plain, *.txt)',
+            accept: { 'text/plain': ['.plain', '.txt'] }
+          }]
+        });
+        const file = await handle.getFile();
+        const text = await file.text();
+        const newId = file.name.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+        const newFile = {
+          id: newId,
+          name: file.name,
+          code: text,
+          category: 'workspace'
+        };
+        setFiles(prev => [...prev.filter(f => f.id !== newId), newFile]);
+        setActiveFileId(newId);
+        setOpenFileIds(prev => Array.from(new Set([...prev, newId])));
+        executeCode(text, []);
+        return;
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+      }
+    }
+
+    // 3. Fallback file input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
       fileInputRef.current.click();
@@ -369,7 +424,36 @@ export default function App() {
   };
 
   // 3. Open Folder...
-  const handleOpenFolder = () => {
+  const handleOpenFolder = async () => {
+    // 1. Try native Tauri dialog
+    if (typeof window !== 'undefined' && window.__TAURI_INTERNALS__) {
+      try {
+        const { invoke } = await import('@tauri-apps/api/core');
+        const folderData = await invoke('open_folder_dialog');
+        if (folderData && folderData.files) {
+          setFolderName(folderData.folder_name);
+          const loaded = folderData.files.map(f => ({
+            id: f.name.toLowerCase().replace(/[^a-z0-9_]/g, '_'),
+            name: f.name,
+            path: f.path,
+            code: f.content,
+            category: folderData.folder_name
+          }));
+          if (loaded.length > 0) {
+            setFiles(loaded);
+            setOpenFileIds([loaded[0].id]);
+            setActiveFileId(loaded[0].id);
+            executeCode(loaded[0].code, []);
+          }
+          return;
+        }
+        return;
+      } catch (err) {
+        console.warn('Tauri open_folder_dialog error:', err);
+      }
+    }
+
+    // 2. Fallback folder input
     if (folderInputRef.current) {
       folderInputRef.current.value = '';
       folderInputRef.current.click();
@@ -409,10 +493,24 @@ export default function App() {
   };
 
   // 4. Save File (Ctrl+S)
-  const handleSaveFile = () => {
+  const handleSaveFile = async () => {
     if (!activeFile) return;
 
-    // Trigger local browser download / save to disk
+    // In Tauri, also sync to workspace directory on disk
+    if (typeof window !== 'undefined' && window.__TAURI_INTERNALS__) {
+      try {
+        const { invoke } = await import('@tauri-apps/api/core');
+        await invoke('exec_terminal', {
+          command: 'true',
+          args: [],
+          cwd: null,
+          stdinData: null,
+          syncFile: { name: activeFile.name, content: activeCode }
+        });
+      } catch {}
+    }
+
+    // Trigger browser download or local blob
     try {
       const blob = new Blob([activeCode], { type: 'text/plain;charset=utf-8' });
       const url = URL.createObjectURL(blob);
@@ -428,10 +526,102 @@ export default function App() {
     }
   };
 
-  // 5. Save As...
-  const handleSaveAs = () => {
+  // 5. Save As... (Opens native OS Folder & File dialog)
+  // 5. Save As... (Opens native OS Folder & File dialog)
+  const handleSaveAs = async () => {
     if (!activeFile) return;
-    const chosen = window.prompt("Save as (.plain filename):", activeFile.name);
+
+    const suggested = activeFile.name.endsWith('.plain') ? activeFile.name : `${activeFile.name}.plain`;
+
+    // 1. If in Tauri desktop app, use native OS file dialog (rfd)
+    if (typeof window !== 'undefined' && window.__TAURI_INTERNALS__) {
+      try {
+        const { invoke } = await import('@tauri-apps/api/core');
+        const saved = await invoke('save_file_dialog', {
+          suggestedName: suggested,
+          content: activeCode
+        });
+        if (saved) {
+          const newId = saved.name.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+          const newFile = {
+            id: newId,
+            name: saved.name,
+            path: saved.path,
+            code: saved.content,
+            category: 'workspace'
+          };
+          setFiles(prev => [...prev.filter(f => f.id !== newId), newFile]);
+          setActiveFileId(newId);
+          setOpenFileIds(prev => Array.from(new Set([...prev, newId])));
+          executeCode(saved.content, []);
+          return;
+        }
+        return; // user cancelled dialog
+      } catch (err) {
+        console.warn('Tauri save_file_dialog error:', err);
+      }
+    }
+
+    // 2. Try Vite backend native OS save-as dialog (zenity)
+    try {
+      const resp = await fetch('/api/terminal/save-as', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ suggestedName: suggested, content: activeCode })
+      });
+      const data = await resp.json();
+      if (data.success) {
+        const newId = data.name.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+        const newFile = {
+          id: newId,
+          name: data.name,
+          path: data.path,
+          code: data.content,
+          category: 'workspace'
+        };
+        setFiles(prev => [...prev.filter(f => f.id !== newId), newFile]);
+        setActiveFileId(newId);
+        setOpenFileIds(prev => Array.from(new Set([...prev, newId])));
+        executeCode(data.content, []);
+        return;
+      } else if (data.cancelled) {
+        return; // user cancelled
+      }
+    } catch {}
+
+    // 3. If in modern browser with showSaveFilePicker
+    if ('showSaveFilePicker' in window) {
+      try {
+        const handle = await window.showSaveFilePicker({
+          suggestedName: suggested,
+          types: [{
+            description: 'Plain Language File (*.plain)',
+            accept: { 'text/plain': ['.plain'] }
+          }]
+        });
+        const writable = await handle.createWritable();
+        await writable.write(activeCode);
+        await writable.close();
+
+        const newName = handle.name;
+        const newId = newName.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+        const newFile = {
+          id: newId,
+          name: newName,
+          code: activeCode,
+          category: 'workspace'
+        };
+        setFiles(prev => [...prev.filter(f => f.id !== newId), newFile]);
+        setActiveFileId(newId);
+        setOpenFileIds(prev => Array.from(new Set([...prev, newId])));
+        return;
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+      }
+    }
+
+    // 4. Fallback: prompt for filename and download
+    const chosen = window.prompt("Save file as (.plain):", activeFile.name);
     if (chosen && chosen.trim()) {
       let finalName = chosen.trim();
       if (!finalName.endsWith('.plain')) finalName += '.plain';
@@ -446,7 +636,6 @@ export default function App() {
       setActiveFileId(newId);
       setOpenFileIds(prev => Array.from(new Set([...prev, newId])));
 
-      // Download
       const blob = new Blob([activeCode], { type: 'text/plain;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -459,7 +648,56 @@ export default function App() {
     }
   };
 
-  // 6. Close File Tab
+  // 6. Delete File
+  const handleDeleteFile = async (id) => {
+    const fileToDelete = files.find(f => f.id === id);
+    if (!fileToDelete) return;
+
+    // Delete from disk if in Tauri
+    if (typeof window !== 'undefined' && window.__TAURI_INTERNALS__) {
+      try {
+        const { invoke } = await import('@tauri-apps/api/core');
+        await invoke('delete_workspace_file', { filename: fileToDelete.name });
+      } catch (err) {
+        console.warn('Tauri delete file error:', err);
+      }
+    } else {
+      // Delete from disk via Vite dev server
+      try {
+        await fetch('/api/terminal/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filename: fileToDelete.name })
+        });
+      } catch (err) {
+        console.warn('Vite delete file error:', err);
+      }
+    }
+
+    const remainingFiles = files.filter(f => f.id !== id);
+    if (remainingFiles.length === 0) {
+      // If user deleted the last file, create a fresh untitled.plain
+      const fresh = {
+        id: 'untitled',
+        name: 'untitled.plain',
+        code: `# New Plain File\n\nask user_name with "What is your name?"\nsay "Hello, " + user_name\n`,
+        category: 'workspace'
+      };
+      setFiles([fresh]);
+      setOpenFileIds(['untitled']);
+      setActiveFileId('untitled');
+      executeCode(fresh.code, []);
+    } else {
+      setFiles(remainingFiles);
+      handleCloseFile(id);
+      if (activeFileId === id) {
+        setActiveFileId(remainingFiles[0].id);
+        executeCode(remainingFiles[0].code, []);
+      }
+    }
+  };
+
+  // 7. Close File Tab
   const handleCloseFile = (id) => {
     const targetId = id || activeFileId;
     const nextOpen = openFileIds.filter(fId => fId !== targetId);
@@ -483,11 +721,6 @@ export default function App() {
       setSessionInputs([]);
       executeCode(targetFile.code, []);
     }
-  };
-
-  const handleDeleteFile = (id) => {
-    setFiles(prev => prev.filter(f => f.id !== id));
-    handleCloseFile(id);
   };
 
   const handleInsertSnippet = (snippet) => {
@@ -566,6 +799,7 @@ export default function App() {
         onSaveFile={handleSaveFile}
         onSaveAs={handleSaveAs}
         onCloseFile={() => handleCloseFile(activeFileId)}
+        onDeleteFile={() => activeFileId && handleDeleteFile(activeFileId)}
         folderName={folderName}
       />
 
@@ -612,6 +846,7 @@ export default function App() {
             onSelectFile={handleSelectFile}
             onCloseFile={handleCloseFile}
             onNewFile={handleNewFilePrompt}
+            onDeleteFile={handleDeleteFile}
           />
 
           <div className="vs-editor-container">
@@ -648,6 +883,7 @@ export default function App() {
                 activeCode={activeCode}
                 files={files}
                 onSelectFile={handleSelectFile}
+                onDeleteFile={handleDeleteFile}
               />
             </>
           )}
